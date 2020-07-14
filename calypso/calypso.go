@@ -7,8 +7,8 @@ import (
 	"go.dedis.ch/dela/serde"
 	"go.dedis.ch/dela/serde/registry"
 
-	"go.dedis.ch/dela/calypso/storage"
-	"go.dedis.ch/dela/calypso/storage/inmemory"
+	"go.dedis.ch/dela-apps/calypso/storage"
+	"go.dedis.ch/dela-apps/calypso/storage/inmemory"
 	"go.dedis.ch/dela/dkg"
 	"go.dedis.ch/dela/ledger/arc"
 	"go.dedis.ch/dela/ledger/arc/darc"

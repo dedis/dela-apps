@@ -3,7 +3,7 @@ package json
 import (
 	"encoding/json"
 
-	"go.dedis.ch/dela/calypso"
+	"go.dedis.ch/dela-apps/calypso"
 	"go.dedis.ch/dela/ledger/arc"
 	"go.dedis.ch/dela/serde"
 	"go.dedis.ch/kyber/v3/suites"

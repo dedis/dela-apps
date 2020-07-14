@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.dedis.ch/dela/calypso"
-	"go.dedis.ch/dela/internal/testing/fake"
+	"go.dedis.ch/dela-apps/calypso"
+	"go.dedis.ch/dela-apps/internal/testing/fake"
 	"go.dedis.ch/dela/serde"
 	"go.dedis.ch/kyber/v3"
 	"golang.org/x/xerrors"

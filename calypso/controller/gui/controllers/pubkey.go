@@ -38,8 +38,8 @@ func (c Ctrl) pubkeyGET(w http.ResponseWriter, r *http.Request) {
 
 	pubkeyHex := hex.EncodeToString(pubkeyBuf)
 
-	t, err := template.ParseFiles(c.abs("gui/views/layout.gohtml"),
-		c.abs("gui/views/pubkey.gohtml"))
+	t, err := template.ParseFiles(c.Abs("gui/views/layout.gohtml"),
+		c.Abs("gui/views/pubkey.gohtml"))
 	if err != nil {
 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
 		return

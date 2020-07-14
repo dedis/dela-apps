@@ -26,8 +26,8 @@ func (c Ctrl) EncryptHandler() http.HandlerFunc {
 }
 
 func (c Ctrl) encryptGET(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles(c.abs("gui/views/layout.gohtml"),
-		c.abs("gui/views/encrypt.gohtml"))
+	t, err := template.ParseFiles(c.Abs("gui/views/layout.gohtml"),
+		c.Abs("gui/views/encrypt.gohtml"))
 	if err != nil {
 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -107,8 +107,8 @@ func (c Ctrl) encryptPOST(w http.ResponseWriter, r *http.Request) {
 	khex := hex.EncodeToString(kBuf)
 	chex := hex.EncodeToString(cBuf)
 
-	t, err := template.ParseFiles(c.abs("gui/views/layout.gohtml"),
-		c.abs("gui/views/encrypt.gohtml"))
+	t, err := template.ParseFiles(c.Abs("gui/views/layout.gohtml"),
+		c.Abs("gui/views/encrypt.gohtml"))
 	if err != nil {
 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
 		return

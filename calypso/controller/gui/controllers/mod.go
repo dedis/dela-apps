@@ -1,15 +1,25 @@
 package controllers
 
 import (
+	"log"
 	"path/filepath"
+	"runtime"
 
-	"go.dedis.ch/dela/calypso"
+	"go.dedis.ch/dela-apps/calypso"
 )
 
-// NewCtrl creates a new Ctrl
-func NewCtrl(path string, caly *calypso.Calypso) *Ctrl {
+// NewCtrl creates a new Ctrl. It gets and stored the current folder path of
+// this file so that we can later reference our statics files.
+func NewCtrl(caly *calypso.Calypso) *Ctrl {
+	_, filename, _, ok := runtime.Caller(1)
+	if !ok {
+		log.Fatal("failed to get current path for Calypso GUI")
+	}
+
+	filename = filepath.Dir(filename)
+
 	return &Ctrl{
-		path: path,
+		path: filename,
 		caly: caly,
 	}
 }
@@ -21,7 +31,7 @@ type Ctrl struct {
 	caly *calypso.Calypso
 }
 
-// abs is a utility to compute the absolute file path
-func (c Ctrl) abs(path string) string {
+// Abs is a utility to compute the absolute file path
+func (c Ctrl) Abs(path string) string {
 	return filepath.Join(c.path, path)
 }

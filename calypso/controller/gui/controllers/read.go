@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"text/template"
 
-	"go.dedis.ch/dela/calypso/controller/gui/models"
+	"go.dedis.ch/dela-apps/calypso/controller/gui/models"
 	"go.dedis.ch/dela/ledger/arc"
 )
 
@@ -26,8 +26,8 @@ func (c Ctrl) ReadHandler() http.HandlerFunc {
 
 func (c Ctrl) readGET(w http.ResponseWriter, r *http.Request) {
 
-	t, err := template.ParseFiles(c.abs("gui/views/layout.gohtml"),
-		c.abs("gui/views/read.gohtml"))
+	t, err := template.ParseFiles(c.Abs("gui/views/layout.gohtml"),
+		c.Abs("gui/views/read.gohtml"))
 	if err != nil {
 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -82,8 +82,8 @@ func (c Ctrl) readPOST(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := template.ParseFiles(c.abs("gui/views/layout.gohtml"),
-		c.abs("gui/views/read.gohtml"))
+	t, err := template.ParseFiles(c.Abs("gui/views/layout.gohtml"),
+		c.Abs("gui/views/read.gohtml"))
 	if err != nil {
 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
 		return

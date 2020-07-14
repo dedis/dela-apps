@@ -17,8 +17,8 @@ func (c Ctrl) renderHTTPError(w http.ResponseWriter, message string, code int) {
 		code,
 	}
 
-	t, err := template.ParseFiles(c.abs("gui/views/layout.gohtml"),
-		c.abs("gui/views/error.gohtml"))
+	t, err := template.ParseFiles(c.Abs("gui/views/layout.gohtml"),
+		c.Abs("gui/views/error.gohtml"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

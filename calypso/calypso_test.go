@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.dedis.ch/dela-apps/internal/testing/fake"
 	"go.dedis.ch/dela/crypto"
 	"go.dedis.ch/dela/crypto/ed25519"
 	"go.dedis.ch/dela/dkg"
-	"go.dedis.ch/dela/internal/testing/fake"
 	"go.dedis.ch/dela/ledger/arc"
 	"go.dedis.ch/dela/ledger/arc/darc"
 	"go.dedis.ch/kyber/v3"

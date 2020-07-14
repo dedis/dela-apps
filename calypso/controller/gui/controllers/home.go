@@ -24,8 +24,8 @@ func (c Ctrl) homeGET(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := template.ParseFiles(c.abs("gui/views/layout.gohtml"),
-		c.abs("gui/views/home.gohtml"))
+	t, err := template.ParseFiles(c.Abs("gui/views/layout.gohtml"),
+		c.Abs("gui/views/home.gohtml"))
 	if err != nil {
 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
 		return
