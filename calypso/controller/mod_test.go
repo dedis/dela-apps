@@ -23,7 +23,7 @@ import (
 )
 
 func TestMinimal_Build(t *testing.T) {
-	minimal := NewMinimal("")
+	minimal := NewMinimal()
 	minimal.SetCommands(fakeBuilder{})
 }
 
