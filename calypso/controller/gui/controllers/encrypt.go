@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"text/template"
 
-	"go.dedis.ch/dela/dkg"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/util/random"
 )
@@ -73,7 +72,7 @@ func (c Ctrl) encryptPOST(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pubkey := dkg.Suite.Point()
+	pubkey := suite.Point()
 	err = pubkey.UnmarshalBinary(pubkeyBuf)
 	if err != nil {
 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
@@ -88,7 +87,7 @@ func (c Ctrl) encryptPOST(w http.ResponseWriter, r *http.Request) {
 
 	if len(remainder) != 0 {
 		c.renderHTTPError(w, fmt.Sprintf("message too long, %d bytes could not "+
-			"be embeded", len(remainder)), http.StatusBadRequest)
+			"be embedded", len(remainder)), http.StatusBadRequest)
 		return
 	}
 
@@ -137,17 +136,17 @@ func encrypt(message []byte, pubkey kyber.Point) (
 	K kyber.Point, C kyber.Point, remainder []byte, err error) {
 
 	// Embed the message (or as much of it as will fit) into a curve point.
-	M := dkg.Suite.Point().Embed(message, random.New())
-	max := dkg.Suite.Point().EmbedLen()
+	M := suite.Point().Embed(message, random.New())
+	max := suite.Point().EmbedLen()
 	if max > len(message) {
 		max = len(message)
 	}
 	remainder = message[max:]
 	// ElGamal-encrypt the point to produce ciphertext (K,C).
-	k := dkg.Suite.Scalar().Pick(random.New()) // ephemeral private key
-	K = dkg.Suite.Point().Mul(k, nil)          // ephemeral DH public key
-	S := dkg.Suite.Point().Mul(k, pubkey)      // ephemeral DH shared secret
-	C = S.Add(S, M)                            // message blinded with secret
+	k := suite.Scalar().Pick(random.New()) // ephemeral private key
+	K = suite.Point().Mul(k, nil)          // ephemeral DH public key
+	S := suite.Point().Mul(k, pubkey)      // ephemeral DH shared secret
+	C = S.Add(S, M)                        // message blinded with secret
 
 	return K, C, remainder, nil
 }

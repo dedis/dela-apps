@@ -2,8 +2,8 @@ package models
 
 import "go.dedis.ch/kyber/v3"
 
-// NewEncrpytedMsg creates a new encrypted message
-func NewEncrpytedMsg(k, c kyber.Point) *EncryptedMsg {
+// NewEncryptedMsg creates a new encrypted message
+func NewEncryptedMsg(k, c kyber.Point) *EncryptedMsg {
 	return &EncryptedMsg{
 		K: k,
 		C: c,

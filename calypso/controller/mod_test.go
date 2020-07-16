@@ -17,7 +17,7 @@ import (
 	"go.dedis.ch/dela/dkg"
 	"go.dedis.ch/dela/ledger/arc"
 	"go.dedis.ch/dela/mino"
-	"go.dedis.ch/dela/mino/httpclient"
+	"go.dedis.ch/dela/mino/proxy"
 	"go.dedis.ch/kyber/v3"
 	"golang.org/x/xerrors"
 )
@@ -29,7 +29,7 @@ func TestMinimal_Build(t *testing.T) {
 
 func TestMinimal_Inject(t *testing.T) {
 	minimal := minimal{}
-	inj := newInjector(fakeDKG{}, fakeHttpclient{})
+	inj := newInjector(fakeDKG{}, fakeProxy{})
 
 	err := minimal.Inject(fakeFlags{}, inj)
 	require.NoError(t, err)
@@ -38,7 +38,7 @@ func TestMinimal_Inject(t *testing.T) {
 	require.IsType(t, &calypso.Calypso{}, inj.(*fakeInjector).history[0])
 
 	err = minimal.Inject(fakeFlags{}, newInjector(fakeDKG{}, nil))
-	require.EqualError(t, err, "failed to resolve httpclient: oops")
+	require.EqualError(t, err, "failed to resolve proxy: oops")
 
 	err = minimal.Inject(fakeFlags{}, newInjector(fakeDKG{isBad: true}, nil))
 	require.EqualError(t, err, "failed to listen dkg: oops")
@@ -101,7 +101,7 @@ func TestSetupAction_Execute(t *testing.T) {
 		Injector: &fakeInjector{
 			mino: fake.Mino{},
 			privateStorage: fakePrivateStorage{
-				setupPoint: dkg.Suite.Point(),
+				setupPoint: suite.Point(),
 			},
 		},
 	}
@@ -141,7 +141,7 @@ func TestSetupAction_Execute(t *testing.T) {
 	}
 
 	err = setup.Execute(ctx)
-	require.EqualError(t, err, "failed to unmarhsal point: invalid Ed25519 curve point")
+	require.EqualError(t, err, "failed to unmarshal point: invalid Ed25519 curve point")
 
 	formatter = fakeFormatter{
 		executeRequest: executeRequest{
@@ -238,10 +238,10 @@ func (b fakeCommandBuilder) SetSubCommand(name string) cli.CommandBuilder {
 }
 
 // newInjector is used to test the inject function, which requires an interface
-func newInjector(dkg dkg.DKG, httpclient httpclient.Httpclient) node.Injector {
+func newInjector(dkg dkg.DKG, proxy proxy.Proxy) node.Injector {
 	return &fakeInjector{
-		dkg:        dkg,
-		httpclient: httpclient,
+		dkg:   dkg,
+		proxy: proxy,
 	}
 }
 
@@ -259,7 +259,7 @@ type fakeInjector struct {
 	dkg            dkg.DKG
 	mino           mino.Mino
 	privateStorage calypso.PrivateStorage
-	httpclient     httpclient.Httpclient
+	proxy          proxy.Proxy
 	history        []interface{}
 }
 
@@ -282,13 +282,13 @@ func (i fakeInjector) Resolve(el interface{}) error {
 			return xerrors.New("oops")
 		}
 		*msg = i.privateStorage
-	case *httpclient.Httpclient:
-		if i.httpclient == nil {
+	case *proxy.Proxy:
+		if i.proxy == nil {
 			return xerrors.New("oops")
 		}
-		*msg = i.httpclient
+		*msg = i.proxy
 	default:
-		return xerrors.Errorf("unkown message '%T", msg)
+		return xerrors.Errorf("unknown message '%T", msg)
 	}
 
 	return nil
@@ -431,17 +431,25 @@ func (badPoint) MarshalBinary() ([]byte, error) {
 	return nil, xerrors.Errorf("oops")
 }
 
-// fakeHttpclient is a fake http client
+// fakeProxy is a fake proxy
 //
-// - implements httpclient.Httpclient
-type fakeHttpclient struct {
+// - implements proxy.Proxy
+type fakeProxy struct {
 }
 
-// Start implements httpclient.Httpclient
-func (h fakeHttpclient) Start() {
+// Listen implements proxy.Proxy
+func (h fakeProxy) Listen() {
+
 }
 
-// RegisterHandler implements httpclient.Httpclient
-func (h fakeHttpclient) RegisterHandler(path string, handler func(http.ResponseWriter, *http.Request)) error {
-	return nil
+// Start implements proxy.Proxy
+func (h fakeProxy) Start() {
+}
+
+// Stop implements proxy.Proxy
+func (h fakeProxy) Stop() {
+}
+
+// RegisterHandler implements proxy.Proxy
+func (h fakeProxy) RegisterHandler(path string, handler func(http.ResponseWriter, *http.Request)) {
 }

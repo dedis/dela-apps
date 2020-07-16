@@ -8,7 +8,6 @@ import (
 
 	"go.dedis.ch/dela-apps/calypso"
 	"go.dedis.ch/dela-apps/calypso/controller/gui/models"
-	"go.dedis.ch/dela/dkg"
 	"go.dedis.ch/dela/ledger/arc/darc"
 )
 
@@ -80,14 +79,14 @@ func (c Ctrl) writePOST(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	kPoint := dkg.Suite.Point()
+	kPoint := suite.Point()
 	err = kPoint.UnmarshalBinary(kBuf)
 	if err != nil {
 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	cPoint := dkg.Suite.Point()
+	cPoint := suite.Point()
 	err = cPoint.UnmarshalBinary(cBuf)
 	if err != nil {
 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
@@ -124,7 +123,7 @@ func (c Ctrl) writePOST(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	id, err := c.caly.Write(models.NewEncrpytedMsg(kPoint, cPoint), d)
+	id, err := c.caly.Write(models.NewEncryptedMsg(kPoint, cPoint), d)
 	if err != nil {
 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
 		return

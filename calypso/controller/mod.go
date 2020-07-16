@@ -15,9 +15,13 @@ import (
 	"go.dedis.ch/dela/crypto/ed25519"
 	"go.dedis.ch/dela/dkg"
 	"go.dedis.ch/dela/mino"
-	"go.dedis.ch/dela/mino/httpclient"
+	"go.dedis.ch/dela/mino/proxy"
+	"go.dedis.ch/kyber/v3/suites"
 	"golang.org/x/xerrors"
 )
+
+// suite is the Kyber suite for Pedersen.
+var suite = suites.MustFind("Ed25519")
 
 // formatter defines how messages are marshalled/unmarshalled for the deamon.
 // Using this variable allows us to gain flexibility for the tests.
@@ -52,7 +56,7 @@ func (m minimal) SetCommands(builder node.Builder) {
 		},
 		cli.StringFlag{
 			Name: "addrs",
-			Usage: "a list of addresses correponding to the public keys, " +
+			Usage: "a list of addresses corresponding to the public keys, " +
 				"separated by commas",
 			Required: true,
 		},
@@ -84,21 +88,21 @@ func (m minimal) Inject(ctx cli.Flags, inj node.Injector) error {
 
 	inj.Inject(caly)
 
-	var httpclient httpclient.Httpclient
-	err = inj.Resolve(&httpclient)
+	var proxy proxy.Proxy
+	err = inj.Resolve(&proxy)
 	if err != nil {
-		return xerrors.Errorf("failed to resolve httpclient: %v", err)
+		return xerrors.Errorf("failed to resolve proxy: %v", err)
 	}
 
 	ctrl := guictrl.NewCtrl(caly)
 
 	fs := http.FileServer(http.Dir(ctrl.Abs("gui/assets")))
-	httpclient.RegisterHandler("/assets/", tofunc(http.StripPrefix("/assets/", fs)))
-	httpclient.RegisterHandler("/", ctrl.HomeHandler())
-	httpclient.RegisterHandler("/pubkey", ctrl.PubkeyHandler())
-	httpclient.RegisterHandler("/encrypt", ctrl.EncryptHandler())
-	httpclient.RegisterHandler("/write", ctrl.WriteHandler())
-	httpclient.RegisterHandler("/read", ctrl.ReadHandler())
+	proxy.RegisterHandler("/assets/", tofunc(http.StripPrefix("/assets/", fs)))
+	proxy.RegisterHandler("/", ctrl.HomeHandler())
+	proxy.RegisterHandler("/pubkey", ctrl.PubkeyHandler())
+	proxy.RegisterHandler("/encrypt", ctrl.EncryptHandler())
+	proxy.RegisterHandler("/write", ctrl.WriteHandler())
+	proxy.RegisterHandler("/read", ctrl.ReadHandler())
 
 	return nil
 }
@@ -109,7 +113,7 @@ func tofunc(h http.Handler) http.HandlerFunc {
 	})
 }
 
-// setupAction is an action to setup Calypso. This action pefrms the DKG key
+// setupAction is an action to setup Calypso. This action performs the DKG key
 // sharing and should only be run once on a node.
 //
 // - implements node.ActionTemplate
@@ -175,7 +179,7 @@ func (a setupAction) Execute(req node.Context) error {
 	pubkeys := make([]ed25519.PublicKey, len(input.Pubkeys))
 	addrs := make([]mino.Address, len(input.Addrs))
 	for i, keyHex := range input.Pubkeys {
-		point := dkg.Suite.Point()
+		point := suite.Point()
 
 		keyBuf, err := hex.DecodeString(keyHex)
 		if err != nil {
@@ -184,7 +188,7 @@ func (a setupAction) Execute(req node.Context) error {
 
 		err = point.UnmarshalBinary(keyBuf)
 		if err != nil {
-			return xerrors.Errorf("failed to unmarhsal point: %v", err)
+			return xerrors.Errorf("failed to unmarshal point: %v", err)
 		}
 
 		pubkeys[i] = ed25519.NewPublicKeyFromPoint(point)

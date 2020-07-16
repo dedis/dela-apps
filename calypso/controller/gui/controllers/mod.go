@@ -6,7 +6,11 @@ import (
 	"runtime"
 
 	"go.dedis.ch/dela-apps/calypso"
+	"go.dedis.ch/kyber/v3/suites"
 )
+
+// suite is the Kyber suite for Pedersen.
+var suite = suites.MustFind("Ed25519")
 
 // NewCtrl creates a new Ctrl. It gets and stored the current folder path of
 // this file so that we can later reference our statics files.
