@@ -1,8 +1,8 @@
 package calypso
 
 import (
+	"go.dedis.ch/dela/core/access"
 	"go.dedis.ch/dela/crypto"
-	"go.dedis.ch/dela/ledger/arc"
 	"go.dedis.ch/kyber/v3"
 )
 
@@ -17,9 +17,9 @@ type PrivateStorage interface {
 	// setup has not been done.
 	GetPublicKey() (kyber.Point, error)
 
-	Write(message EncryptedMessage, ac arc.AccessControl) (ID []byte, err error)
-	Read(ID []byte, idents ...arc.Identity) (msg []byte, err error)
-	UpdateAccess(ID []byte, ident arc.Identity, ac arc.AccessControl) error
+	Write(message EncryptedMessage, ac access.Service) (ID []byte, err error)
+	Read(ID []byte, idents ...access.Identity) (msg []byte, err error)
+	UpdateAccess(ID []byte, ident access.Identity, ac access.Service) error
 }
 
 // EncryptedMessage wraps the K, C arguments needed to decrypt a message. K is

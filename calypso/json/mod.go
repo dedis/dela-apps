@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"go.dedis.ch/dela-apps/calypso"
-	"go.dedis.ch/dela/ledger/arc"
 	"go.dedis.ch/dela/serde"
 	"go.dedis.ch/kyber/v3/suites"
 	"golang.org/x/xerrors"
@@ -37,11 +36,6 @@ func (f recordFormat) Encode(ctx serde.Context, msg serde.Message) ([]byte, erro
 		return nil, xerrors.Errorf("unsupported message of type '%T'", msg)
 	}
 
-	acBuf, err := record.GetAccess().Serialize(ctx)
-	if err != nil {
-		return nil, xerrors.Errorf("failed to serialize the access control: %v", err)
-	}
-
 	kBuf, err := record.GetK().MarshalBinary()
 	if err != nil {
 		return nil, xerrors.Errorf("failed to marshal K: %v", err)
@@ -53,9 +47,8 @@ func (f recordFormat) Encode(ctx serde.Context, msg serde.Message) ([]byte, erro
 	}
 
 	m := Record{
-		K:  kBuf,
-		C:  cBuf,
-		AC: acBuf,
+		K: kBuf,
+		C: cBuf,
 	}
 
 	data, err := ctx.Marshal(m)
@@ -73,18 +66,6 @@ func (f recordFormat) Decode(ctx serde.Context, data []byte) (serde.Message, err
 		return nil, xerrors.Errorf("couldn't unmarshal record: %v", err)
 	}
 
-	factory := ctx.GetFactory(calypso.AccessKeyFac{})
-
-	fac, ok := factory.(arc.AccessControlFactory)
-	if !ok {
-		return nil, xerrors.Errorf("invalid factory of type '%T'", factory)
-	}
-
-	ac, err := fac.AccessOf(ctx, m.AC)
-	if err != nil {
-		return nil, xerrors.Errorf("failed to deserialize the access control: %v", err)
-	}
-
 	K := f.suite.Point()
 	err = K.UnmarshalBinary(m.K)
 	if err != nil {
@@ -97,7 +78,7 @@ func (f recordFormat) Decode(ctx serde.Context, data []byte) (serde.Message, err
 		return nil, xerrors.Errorf("failed to unmarshal C: %v", err)
 	}
 
-	r := calypso.NewRecord(K, C, ac)
+	r := calypso.NewRecord(K, C, nil)
 
 	return r, nil
 }

@@ -1,6 +1,8 @@
 package models
 
-import "go.dedis.ch/dela/ledger/arc"
+import (
+	"go.dedis.ch/dela/core/access"
+)
 
 // NewIdentity creates a new identity
 func NewIdentity(id string) *Identity {
@@ -13,7 +15,7 @@ func NewIdentity(id string) *Identity {
 //
 // - implements arc.Identity
 type Identity struct {
-	arc.Identity
+	access.Identity
 	buffer []byte
 }
 
