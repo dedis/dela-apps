@@ -9,10 +9,6 @@ import (
 // suite is the Kyber suite for Pedersen.
 var suite = suites.MustFind("Ed25519")
 
-// formatter defines how messages are marshalled/unmarshalled for the deamon.
-// Using this variable allows us to gain flexibility for the tests.
-var formatter formatterI = jsonFormatter{}
-
 // NewMinimal returns a new minimal initializer. The static files for the client
 // GUI are not packed in the binairy, so one need to build its own binairy in
 // order to use it.

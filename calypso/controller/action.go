@@ -3,9 +3,7 @@ package controller
 import (
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -169,28 +167,4 @@ func (a setupAction) Execute(ctx node.Context) error {
 		"Here is the Calypso shared pub key: %s\n", hex.EncodeToString(pubkeyBuf))
 
 	return nil
-}
-
-// formatterI is an interface that defines the primitives needed to pass
-// messages to the deamon
-type formatterI interface {
-	Marshal(interface{}) ([]byte, error)
-	Decode(interface{}, io.Reader) error
-}
-
-// jsonFormatter is a formatter using json
-//
-// - implements formatterI
-type jsonFormatter struct {
-}
-
-// Marshal implements formatterI
-func (f jsonFormatter) Marshal(i interface{}) ([]byte, error) {
-	return json.Marshal(i)
-}
-
-// Decode implements formatterI
-func (f jsonFormatter) Decode(i interface{}, reader io.Reader) error {
-	dec := json.NewDecoder(reader)
-	return dec.Decode(i)
 }
