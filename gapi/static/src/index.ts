@@ -316,7 +316,7 @@ class Visu {
       .style('stroke', '#aaa')
       .attr('r', 10)
       .transition()
-      .duration(300)
+      .duration(400)
       .attr('cx', nodeBx)
       .attr('cy', nodeBy)
       // .style("fill","blue")

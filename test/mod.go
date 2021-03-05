@@ -200,6 +200,7 @@ func start(ctx *context, inputs ...string) error {
 		cmd := exec.Command("memcoin", args...)
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, "LLVL=info")
+		cmd.Env = append(cmd.Env, fmt.Sprintf(`UNIKERNEL_TCP=%s:%d`, "192.168.232.128", 9001+i))
 
 		cmd.Stdout = outfile
 		cmd.Stderr = errfile
