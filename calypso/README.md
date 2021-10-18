@@ -1,3 +1,7 @@
+This package is kept for historical purposes and may be removed later or updated
+to work. It had been implemented with a previous version of Dela that was quite
+different from now.
+
 ```
 # start node 1 and 2
 go install && LLVL=info memcoin --config /tmp/node1 start --port 2001
