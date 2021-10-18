@@ -35,7 +35,7 @@ func (c *Ctrl) sentGET(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	watcher := c.api.Grpc.GetTrafficWatcher()
-	ins := watcher.Watch(ctx)
+	ins := watcher.WatchIns(ctx)
 
 	for {
 		select {
