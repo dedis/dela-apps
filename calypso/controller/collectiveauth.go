@@ -47,7 +47,7 @@ type pkIterator struct {
 	index   int
 }
 
-func (it pkIterator) Seek(i int) {
+func (it *pkIterator) Seek(i int) {
 	it.index = i
 }
 

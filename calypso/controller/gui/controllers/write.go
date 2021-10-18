@@ -6,9 +6,7 @@ import (
 	"net/http"
 	"text/template"
 
-	"go.dedis.ch/dela-apps/calypso"
 	"go.dedis.ch/dela-apps/calypso/controller/gui/models"
-	"go.dedis.ch/dela/ledger/arc/darc"
 )
 
 // WriteHandler handles the write requests
@@ -99,31 +97,31 @@ func (c Ctrl) writePOST(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	readIdentities := r.PostForm["readID"]
+	// readIdentities := r.PostForm["readID"]
 
-	ownerID := models.NewIdentity(adminIdentity)
-	d := darc.NewAccess()
-	d, err = d.Evolve(calypso.ArcRuleUpdate, ownerID)
-	if err != nil {
-		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// ownerID := models.NewIdentity(adminIdentity)
+	// d := darc.NewService()
+	// d, err = d.Evolve(calypso.ArcRuleUpdate, ownerID)
+	// if err != nil {
+	// 	c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
-	d, err = d.Evolve(calypso.ArcRuleRead, ownerID)
-	if err != nil {
-		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// d, err = d.Evolve(calypso.ArcRuleRead, ownerID)
+	// if err != nil {
+	// 	c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
-	for _, rid := range readIdentities {
-		d, err = d.Evolve(calypso.ArcRuleRead, models.NewIdentity(rid))
-		if err != nil {
-			c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
+	// for _, rid := range readIdentities {
+	// 	d, err = d.Evolve(calypso.ArcRuleRead, models.NewIdentity(rid))
+	// 	if err != nil {
+	// 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
+	// 		return
+	// 	}
+	// }
 
-	id, err := c.caly.Write(models.NewEncryptedMsg(kPoint, cPoint), d)
+	id, err := c.caly.Write(models.NewEncryptedMsg(kPoint, cPoint), nil)
 	if err != nil {
 		c.renderHTTPError(w, err.Error(), http.StatusInternalServerError)
 		return

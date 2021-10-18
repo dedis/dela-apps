@@ -7,7 +7,7 @@ import (
 	"text/template"
 
 	"go.dedis.ch/dela-apps/calypso/controller/gui/models"
-	"go.dedis.ch/dela/ledger/arc"
+	"go.dedis.ch/dela/core/access"
 )
 
 // ReadHandler handles the read requests
@@ -74,7 +74,7 @@ func (c Ctrl) readPOST(w http.ResponseWriter, r *http.Request) {
 	}
 
 	foreignID := models.NewIdentity(identity)
-	idents := []arc.Identity{foreignID}
+	idents := []access.Identity{foreignID}
 
 	msgBuf, err := c.caly.Read(msgIDBuf, idents...)
 	if err != nil {

@@ -9,9 +9,8 @@ import (
 
 	"go.dedis.ch/dela-apps/calypso/storage"
 	"go.dedis.ch/dela-apps/calypso/storage/inmemory"
+	"go.dedis.ch/dela/core/access"
 	"go.dedis.ch/dela/dkg"
-	"go.dedis.ch/dela/ledger/arc"
-	"go.dedis.ch/dela/ledger/arc/darc"
 	"go.dedis.ch/kyber/v3"
 	"golang.org/x/xerrors"
 )
@@ -75,7 +74,7 @@ func (c *Calypso) GetPublicKey() (kyber.Point, error) {
 
 // Write implements calypso.PrivateStorage
 func (c *Calypso) Write(em EncryptedMessage,
-	ac arc.AccessControl) ([]byte, error) {
+	ac access.Service) ([]byte, error) {
 
 	var buf bytes.Buffer
 
@@ -109,16 +108,16 @@ func (c *Calypso) Write(em EncryptedMessage,
 }
 
 // Read implements calypso.PrivateStorage
-func (c *Calypso) Read(id []byte, idents ...arc.Identity) ([]byte, error) {
+func (c *Calypso) Read(id []byte, idents ...access.Identity) ([]byte, error) {
 	record, err := c.getRead(id)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to get read: %v", err)
 	}
 
-	err = record.access.Match(ArcRuleRead, idents...)
-	if err != nil {
-		return nil, xerrors.Errorf("darc verification failed: %v", err)
-	}
+	// err = record.access.Match(c.storage, ArcRuleRead, idents...)
+	// if err != nil {
+	// 	return nil, xerrors.Errorf("darc verification failed: %v", err)
+	// }
 
 	msg, err := c.dkgActor.Decrypt(record.k, record.c)
 	if err != nil {
@@ -130,22 +129,22 @@ func (c *Calypso) Read(id []byte, idents ...arc.Identity) ([]byte, error) {
 
 // UpdateAccess implements calypso.PrivateStorage. It sets a new arc for a given
 // ID, provided the current arc allows the given ident to do so.
-func (c *Calypso) UpdateAccess(id []byte, ident arc.Identity,
-	newAc arc.AccessControl) error {
+func (c *Calypso) UpdateAccess(id []byte, ident access.Identity,
+	newAc access.Service) error {
 
-	record, err := c.getRead(id)
-	if err != nil {
-		return xerrors.Errorf("failed to get read: %v", err)
-	}
+	// record, err := c.getRead(id)
+	// if err != nil {
+	// 	return xerrors.Errorf("failed to get read: %v", err)
+	// }
 
-	err = record.access.Match(ArcRuleUpdate, ident)
-	if err != nil {
-		return xerrors.Errorf("darc verification failed: %v", err)
-	}
+	// err = record.access.Match(ArcRuleUpdate, ident)
+	// if err != nil {
+	// 	return xerrors.Errorf("darc verification failed: %v", err)
+	// }
 
-	record.access = newAc
+	// record.access = newAc
 
-	c.storage.Store(id, record)
+	// c.storage.Store(id, record)
 
 	return nil
 }
@@ -170,11 +169,11 @@ func (c *Calypso) getRead(id []byte) (Record, error) {
 type Record struct {
 	k      kyber.Point
 	c      kyber.Point
-	access arc.AccessControl
+	access access.Service
 }
 
 // NewRecord creates a new record from the points and the access control.
-func NewRecord(K, C kyber.Point, access arc.AccessControl) Record {
+func NewRecord(K, C kyber.Point, access access.Service) Record {
 	return Record{
 		k:      K,
 		c:      C,
@@ -193,7 +192,7 @@ func (r Record) GetC() kyber.Point {
 }
 
 // GetAccess returns the access control for this record.
-func (r Record) GetAccess() arc.AccessControl {
+func (r Record) GetAccess() access.Service {
 	return r.access
 }
 
@@ -216,13 +215,13 @@ type AccessKeyFac struct{}
 //
 // - implements serde.Factory
 type recordFactory struct {
-	darcFactory arc.AccessControlFactory
+	// darcFactory arc.AccessControlFactory
 }
 
 // NewRecordFactory returns a new instance of the record factory.
 func NewRecordFactory() serde.Factory {
 	return recordFactory{
-		darcFactory: darc.NewFactory(),
+		// darcFactory: darc.NewFactory(),
 	}
 }
 
