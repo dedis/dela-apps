@@ -40,7 +40,7 @@ func (c *Ctrl) sentGET(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case in := <-ins:
-			fmt.Fprintf(w, "data: %s\n\n", in)
+			fmt.Fprintf(w, "data: %s\n\n", in.Address.String())
 			flusher.Flush()
 		case <-r.Context().Done():
 			return

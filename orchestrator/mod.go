@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,10 +28,11 @@ type command interface {
 }
 
 type context struct {
-	nodes  Nodes
-	n      int
-	tmpdir string
-	cmdMap map[string]command
+	nodes           Nodes
+	n               int
+	tmpdir          string
+	cmdMap          map[string]command
+	orderedCmdNames []string
 }
 
 func main() {
@@ -57,7 +59,24 @@ func main() {
 		NewCommand("stop", "stop the nodes", stop),
 		NewCommand("help", "print help", help),
 		NewCommand("remove", "remove the content of the temp dir", remove),
+		NewCommand("createKey", "create a default private key", createKey),
+		NewCommand("setRights", "set rights on each node", setRights),
+		NewCommand("grantValue", "grant access on the value contract", grantValue),
+
+		NewCommand("grantVoting", "grant access on the Evoting contract", grantVoting),
+		NewCommand("initDKG", "init DKG", initDKG),
+		NewCommand("initShuffle", "init shuffle", initShuffle),
+		NewCommand("registerVotingHandlers", "register handlers for the voting", registerVotingHandlers),
+		NewCommand("launchVotingScenario", "launch the voting scenario test", launchVotingScenario),
 	}
+
+	orderedCmdNames := make([]string, len(commands))
+	for i, cmd := range commands {
+		orderedCmdNames[i] = cmd.getName()
+	}
+	sort.Slice(orderedCmdNames, func(i, j int) bool {
+		return orderedCmdNames[i] < orderedCmdNames[j]
+	})
 
 	cmdMap := make(map[string]command)
 	for _, cmd := range commands {
@@ -65,9 +84,10 @@ func main() {
 	}
 
 	context := &context{
-		n:      *n,
-		tmpdir: tmpdir,
-		cmdMap: cmdMap,
+		n:               *n,
+		tmpdir:          tmpdir,
+		cmdMap:          cmdMap,
+		orderedCmdNames: orderedCmdNames,
 	}
 
 	for {
@@ -411,7 +431,8 @@ func printConfig(ctx *context, inputs ...string) error {
 func help(ctx *context, inputs ...string) error {
 	fmt.Printf("Help:\n\n")
 
-	for _, cmd := range ctx.cmdMap {
+	for _, name := range ctx.orderedCmdNames {
+		cmd := ctx.cmdMap[name]
 		fmt.Printf("\t- '%s'\t%s\n", cmd.getName(), cmd.getDesc())
 	}
 
@@ -434,4 +455,117 @@ func remove(ctx *context, inputs ...string) error {
 	}
 
 	return nil
+}
+
+// createKey creates the key and injects it in the ctx
+func createKey(ctx *context, inputs ...string) error {
+	path := filepath.Join(ctx.tmpdir, "private.key")
+
+	args := []string{
+		"bls", "signer", "new", "--save", path,
+	}
+
+	out, err := exec.Command("crypto", args...).Output()
+	if err != nil {
+		log.Fatalf("failed to exec crypto command: %v", err)
+	}
+
+	if len(out) != 0 {
+		log.Println(string(out))
+	}
+
+	fmt.Println("private key created in", path)
+
+	return nil
+}
+
+func setRights(ctx *context, inputs ...string) error {
+	keyPath := filepath.Join(ctx.tmpdir, "private.key")
+
+	if len(inputs) == 1 {
+		keyPath = inputs[0]
+	}
+
+	pubKey, err := getPubKey(keyPath)
+	if err != nil {
+		log.Fatalf("failed to get pubKey: %v\n", err)
+	}
+
+	for i, node := range ctx.nodes {
+		args := []string{
+			"--config", node.Dir,
+			"access", "add",
+			"--identity", pubKey,
+		}
+
+		log.Printf("%s %s", "memcoin", strings.Join(args, " "))
+
+		out, err := exec.Command("memcoin", args...).Output()
+		if err != nil {
+			log.Fatalf("failed to set rights for %d: %v\n", i, err)
+		}
+
+		if len(out) != 0 {
+			log.Println(string(out))
+		}
+
+		fmt.Println("right set for", i)
+	}
+
+	return nil
+}
+
+func grantValue(ctx *context, inputs ...string) error {
+	keyPath := filepath.Join(ctx.tmpdir, "private.key")
+
+	if len(inputs) == 1 {
+		keyPath = inputs[0]
+	}
+
+	pubKey, err := getPubKey(keyPath)
+	if err != nil {
+		log.Fatalf("failed to get pubKey: %v\n", err)
+	}
+
+	args := []string{
+		"--config", ctx.nodes[0].Dir,
+		"pool", "add",
+		"--key", keyPath,
+		"--args", "go.dedis.ch/dela.ContractArg",
+		"--args", "go.dedis.ch/dela.Access",
+		"--args", "access:grant_id",
+		"--args", "0200000000000000000000000000000000000000000000000000000000000000",
+		"--args", "access:grant_contract",
+		"--args", "go.dedis.ch/dela.Value",
+		"--args", "access:grant_command",
+		"--args", "all",
+		"--args", "access:identity",
+		"--args", pubKey,
+		"--args", "access:command",
+		"--args", "GRANT",
+	}
+
+	out, err := exec.Command("memcoin", args...).Output()
+	if err != nil {
+		log.Fatalf("failed to add right: %v\n", err)
+	}
+
+	if len(out) != 0 {
+		log.Println(string(out))
+	}
+
+	return nil
+}
+
+func getPubKey(keyPath string) (string, error) {
+	// get the BASE64_PUBKEY from the private key path
+	args := []string{"bls", "signer", "read", "--path", keyPath,
+		"--format", "BASE64_PUBKEY"}
+
+	out, err := exec.Command("crypto", args...).Output()
+	if err != nil {
+		return "", xerrors.Errorf("failed to exec crypto command: %v", err)
+	}
+
+	return string(out), nil
 }
