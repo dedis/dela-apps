@@ -45,12 +45,16 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 )
 
 const dataFormat = "data:{\"time\":\"%s\", \"dest\":\"%s\"}\n\n"
 const timeFormat = "03:04:05 .999"
+
+const n = 200
 
 func main() {
 
@@ -58,64 +62,69 @@ func main() {
 	main_server := http.NewServeMux()
 	main_server.Handle("/", http.FileServer(http.Dir("../static")))
 
-	//Creating sub-domain
-	server1 := http.NewServeMux()
-	server1.HandleFunc("/", server1func)
+	// Creating sub-domain
+	server := http.NewServeMux()
 
-	server2 := http.NewServeMux()
-	server2.HandleFunc("/", server2func)
+	for i := 1; i <= n; i++ {
+		server.HandleFunc(fmt.Sprintf("/%d", i), getServerFunc())
+	}
 
-	server3 := http.NewServeMux()
-	server3.HandleFunc("/", server3func)
+	out := new(strings.Builder)
+	out.WriteString("{\"nodes\": [\n")
 
-	server4 := http.NewServeMux()
-	server4.HandleFunc("/", server4func)
+	lines := make([]string, n)
+	for i := 1; i <= n; i++ {
+		lines[i-1] = fmt.Sprintf("\t{\"id\": \"%s\", \"addr\": \"127.0.0.1:%04d\", "+
+			"\"proxy\": \"http://127.0.0.1:8081/%d\"}", getID(i), i, i)
+	}
 
-	go func() {
-		http.ListenAndServe("localhost:8081", server1)
-	}()
+	out.WriteString(strings.Join(lines, ",\n"))
+	out.WriteString("\n]}")
 
-	go func() {
-		http.ListenAndServe("localhost:8082", server2)
-	}()
+	fmt.Printf("Configuration:\n------------\n\n%s\n\n------------\n", out.String())
 
-	go func() {
-		http.ListenAndServe("localhost:8083", server3)
-	}()
+	go http.ListenAndServe("localhost:8081", server)
 
-	go func() {
-		http.ListenAndServe("localhost:8084", server4)
-	}()
-
-	//Running Main Server
+	// Running Main Server
 	http.ListenAndServe("localhost:8080", main_server)
 }
 
-func server1func(w http.ResponseWriter, r *http.Request) {
-	set_header(w)
-	fmt.Fprintf(w, dataFormat, time.Now().Format(timeFormat), "127.0.0.1:2002")
+func getServerFunc() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		flusher, ok := w.(http.Flusher)
+
+		if !ok {
+			http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		for {
+			select {
+			case <-time.After(time.Millisecond * 100 * time.Duration(rand.Intn(10))):
+				randomDest := fmt.Sprintf("127.0.0.1:%04d", rand.Intn(n))
+				fmt.Fprintf(w, dataFormat, time.Now().Format(timeFormat), randomDest)
+
+				flusher.Flush()
+			case <-r.Context().Done():
+				return
+			}
+		}
+	}
 }
 
-func server2func(w http.ResponseWriter, r *http.Request) {
-	set_header(w)
-	fmt.Fprintf(w, dataFormat, time.Now().Format(timeFormat), "127.0.0.1:2003")
-}
+// getID return a string of form AA to ZZ
+func getID(i int) string {
+	if i < 0 || i > 675 {
+		return "UNDEFINED"
+	}
 
-func server3func(w http.ResponseWriter, r *http.Request) {
-	set_header(w)
-	fmt.Fprintf(w, dataFormat, time.Now().Format(timeFormat), "127.0.0.1:2004")
-	fmt.Fprintf(w, dataFormat, time.Now().Format(timeFormat), "127.0.0.1:2001")
-}
+	firstLetter := byte('A') + byte(i/26)
+	secondLetter := byte('A') + byte(i%26)
 
-func server4func(w http.ResponseWriter, r *http.Request) {
-	set_header(w)
-	fmt.Fprintf(w, dataFormat, time.Now().Format(timeFormat), "127.0.0.1:2005")
-	fmt.Fprintf(w, dataFormat, time.Now().Format(timeFormat), "127.0.0.1:2005")
-}
-
-func set_header(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	return string(firstLetter) + string(secondLetter)
 }
