@@ -199,7 +199,7 @@ func start(ctx *context, inputs ...string) error {
 
 		err := os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			log.Fatalf("failed to create dir: %v\n", err)
+			return xerrors.Errorf("failed to create dir: %v", err)
 		}
 
 		args := []string{
@@ -210,12 +210,12 @@ func start(ctx *context, inputs ...string) error {
 
 		outfile, err := os.Create(filepath.Join(dir, "stdout.txt"))
 		if err != nil {
-			log.Fatalf("failed to create outfile: %v\n", err)
+			return xerrors.Errorf("failed to create outfile: %v", err)
 		}
 
 		errfile, err := os.Create(filepath.Join(dir, "stderr.txt"))
 		if err != nil {
-			log.Fatalf("failed to create errfile: %v\n", err)
+			return xerrors.Errorf("failed to create errfile: %v", err)
 		}
 
 		cmd := exec.Command("memcoin", args...)
@@ -230,7 +230,7 @@ func start(ctx *context, inputs ...string) error {
 
 		err = cmd.Start()
 		if err != nil {
-			log.Fatalf("failed to run %s: %v\n", dir, err)
+			return xerrors.Errorf("failed to run %s: %v", dir, err)
 		}
 
 		ctx.nodes[i] = &Node{
@@ -253,10 +253,10 @@ func startChain(ctx *context, inputs ...string) error {
 	for _, node := range ctx.nodes {
 		out, err := exec.Command("memcoin", "--config", node.Dir, "ordering", "export").Output()
 		if err != nil {
-			log.Fatalf("failed to export node %s: %v\n", node.ID, err)
+			return xerrors.Errorf("failed to export node %s: %v", node.ID, err)
 		}
 
-		outStr := strings.Trim(string(out), "\n\r")
+		outStr := strings.Trim(string(out), "\n\r ")
 
 		args = append(args, "--member", outStr)
 	}
@@ -265,7 +265,7 @@ func startChain(ctx *context, inputs ...string) error {
 
 	out, err := exec.Command("memcoin", args...).Output()
 	if err != nil {
-		log.Fatalf("failed to create chain: %v\n", err)
+		return xerrors.Errorf("failed to create chain: %v", err)
 	}
 
 	if len(out) != 0 {
@@ -304,10 +304,10 @@ func share(ctx *context, inputs ...string) error {
 
 	token, err := exec.Command("memcoin", args...).Output()
 	if err != nil {
-		log.Fatalf("failed to get token: %v\n", err)
+		return xerrors.Errorf("failed to get token: %v", err)
 	}
 
-	tokenStr := strings.Trim(string(token), "\n\r")
+	tokenStr := strings.Trim(string(token), "\n\r ")
 
 	wait := sync.WaitGroup{}
 	wait.Add(len(ctx.nodes) - 1)
@@ -400,7 +400,7 @@ func registerHandler(ctx *context, inputs ...string) error {
 
 		out, err := exec.Command("memcoin", args...).Output()
 		if err != nil {
-			log.Fatalf("failed to register handler for %d: %v\n", i, err)
+			return xerrors.Errorf("failed to register handler for %d: %v", i, err)
 		}
 
 		if len(out) != 0 {
@@ -417,6 +417,7 @@ func printConfig(ctx *context, inputs ...string) error {
 	out := new(strings.Builder)
 	out.WriteString(`{"nodes":[`)
 	nodesStr := make([]string, len(ctx.nodes))
+
 	for i, node := range ctx.nodes {
 		nodesStr[i] = fmt.Sprintf(`{"id": "%s", "addr": "%s", "proxy": "%s"}`, node.ID, node.Addr, node.Proxy)
 	}
@@ -467,7 +468,7 @@ func createKey(ctx *context, inputs ...string) error {
 
 	out, err := exec.Command("crypto", args...).Output()
 	if err != nil {
-		log.Fatalf("failed to exec crypto command: %v", err)
+		return xerrors.Errorf("failed to exec crypto command: %v", err)
 	}
 
 	if len(out) != 0 {
@@ -488,7 +489,7 @@ func setRights(ctx *context, inputs ...string) error {
 
 	pubKey, err := getPubKey(keyPath)
 	if err != nil {
-		log.Fatalf("failed to get pubKey: %v\n", err)
+		return xerrors.Errorf("failed to get pubKey: %v", err)
 	}
 
 	for i, node := range ctx.nodes {
@@ -502,7 +503,7 @@ func setRights(ctx *context, inputs ...string) error {
 
 		out, err := exec.Command("memcoin", args...).Output()
 		if err != nil {
-			log.Fatalf("failed to set rights for %d: %v\n", i, err)
+			return xerrors.Errorf("failed to set rights for %d: %v", i, err)
 		}
 
 		if len(out) != 0 {
@@ -524,7 +525,7 @@ func grantValue(ctx *context, inputs ...string) error {
 
 	pubKey, err := getPubKey(keyPath)
 	if err != nil {
-		log.Fatalf("failed to get pubKey: %v\n", err)
+		return xerrors.Errorf("failed to get pubKey: %v", err)
 	}
 
 	args := []string{
@@ -547,7 +548,7 @@ func grantValue(ctx *context, inputs ...string) error {
 
 	out, err := exec.Command("memcoin", args...).Output()
 	if err != nil {
-		log.Fatalf("failed to add right: %v\n", err)
+		return xerrors.Errorf("failed to add right: %v", err)
 	}
 
 	if len(out) != 0 {
