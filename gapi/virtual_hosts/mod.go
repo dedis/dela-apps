@@ -106,7 +106,7 @@ func getServerFunc() func(w http.ResponseWriter, r *http.Request) {
 		for {
 			select {
 			case <-time.After(time.Millisecond * 100 * time.Duration(rand.Intn(10))):
-				randomDest := fmt.Sprintf("127.0.0.1:%04d", rand.Intn(n))
+				randomDest := fmt.Sprintf("127.0.0.1:%04d", rand.Intn(n+1))
 				fmt.Fprintf(w, dataFormat, time.Now().Format(timeFormat), randomDest)
 
 				flusher.Flush()

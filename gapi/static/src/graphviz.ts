@@ -27,7 +27,10 @@ class GraphViz {
 
   // the alpha value for the simulation. Corresponds to the heat in common
   // simulation system.
-  alpha = 0.1
+  alpha: number = 0.1
+
+  // radius of the nodes
+  node_rad: number = 20
 
   constructor(graph: graphi) {
     this.graph = graph
@@ -89,7 +92,8 @@ class GraphViz {
         .on("end", dragended))
 
     gNode.append('circle')
-      .attr('r', 20)
+      .attr('r', this.node_rad)
+      .attr("font-size", this.node_rad + "px")
       .attr('fill', (d: NodesEntity) => d.color)
 
     gNode.append('text')
@@ -155,6 +159,11 @@ class GraphViz {
       self.updateLinkVal(val.value)
     })
 
+    document.getElementById('radius-update').addEventListener('click', function () {
+      const val = document.getElementById('node-radius') as HTMLFormElement
+      self.updateNodeRadius(val.value)
+    })
+
     window.onresize = function () { self.reportWindowSize() };
   }
 
@@ -183,6 +192,12 @@ class GraphViz {
 
       this.simulation.alpha(this.alpha).restart()
     }
+  }
+
+  updateNodeRadius(val: number) {
+    this.node_rad = val
+    this.svg.selectAll("circle").attr('r', this.node_rad)
+    this.svg.selectAll(".nodes").selectAll("text.label").attr("font-size", this.node_rad + "px")
   }
 
   reportWindowSize() {
@@ -232,13 +247,13 @@ class GraphViz {
       .style('fill', color)
       .style('stroke-width', 1) // set the stroke width
       .style('stroke', '#aaa')
-      .attr('r', 10)
+      .attr('r', this.node_rad/2)
       .transition()
-      .duration(400)
+      .duration(4000)
       .attr('cx', nodeBx)
       .attr('cy', nodeBy)
       // .style("fill","blue")
-      .attr('r', 3)
+      .attr('r', this.node_rad/7)
       .attr("pointer-events", "none")
       .remove()
 
