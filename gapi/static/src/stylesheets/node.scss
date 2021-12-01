@@ -1,8 +1,12 @@
 svg {
   .nodes {
+
     text.label {
-      font-size: 15px;
+      font-size: 20px;
+      pointer-events: none;
       font-weight: bold;
+      text-anchor: middle;
+      dominant-baseline: middle;
     }
 
     .node-content {
@@ -41,5 +45,8 @@ svg {
         }
       }
     }
+  }
+  .nodes:hover {
+    cursor:pointer
   }
 }
