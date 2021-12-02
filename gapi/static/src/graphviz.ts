@@ -249,7 +249,7 @@ class GraphViz {
       .style('stroke', '#aaa')
       .attr('r', this.node_rad/2)
       .transition()
-      .duration(4000)
+      .duration(400)
       .attr('cx', nodeBx)
       .attr('cy', nodeBy)
       // .style("fill","blue")

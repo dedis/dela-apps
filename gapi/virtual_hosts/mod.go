@@ -54,7 +54,7 @@ import (
 const dataFormat = "data:{\"time\":\"%s\", \"dest\":\"%s\"}\n\n"
 const timeFormat = "03:04:05 .999"
 
-const n = 200
+const n = 10
 
 func main() {
 
@@ -105,7 +105,7 @@ func getServerFunc() func(w http.ResponseWriter, r *http.Request) {
 
 		for {
 			select {
-			case <-time.After(time.Millisecond * 100 * time.Duration(rand.Intn(10))):
+			case <-time.After(time.Millisecond * 500 * time.Duration(rand.Intn(10))):
 				randomDest := fmt.Sprintf("127.0.0.1:%04d", rand.Intn(n+1))
 				fmt.Fprintf(w, dataFormat, time.Now().Format(timeFormat), randomDest)
 
