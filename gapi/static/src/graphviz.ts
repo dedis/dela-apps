@@ -164,7 +164,7 @@ class GraphViz {
       self.updateNodeRadius(val.value)
     })
 
-    window.onresize = function () { self.reportWindowSize() };
+    window.addEventListener("resize", function () { self.reportWindowSize() })
   }
 
   updateCharge(val: number) {

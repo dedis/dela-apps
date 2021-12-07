@@ -51,10 +51,10 @@ import (
 	"time"
 )
 
-const dataFormat = "data:{\"time\":\"%s\", \"dest\":\"%s\"}\n\n"
+const dataFormat = "data:{\"time\":\"%s\", \"toAddr\":\"%s\"}\n\n"
 const timeFormat = "03:04:05 .999"
 
-const n = 10
+const n = 6
 
 func main() {
 

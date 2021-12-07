@@ -3,29 +3,48 @@
   display:flex;
   flex-direction: row;
   align-items: center;
-  margin: 0 10%;
+  margin: 15px 10% 0;
 
-  button {
-    flex-shrink: 0;
-    background-color: transparent;
-    border: none;
-    color: #4a4a4a;
+  #play-icon {
+    font-size: 24px;
     opacity: 0.9;
+    color: #4a4a4a;
     transition: 0.1s;
     cursor: pointer;
-    margin: 10px;
-    
+
     &:hover {
       opacity: 1;
     }
   }
-  button.play-button {
-    font-size: 25px;
-  }
-  button.live-button {
-    font-size: 14px;
+
+  button {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background-color: transparent;
+    border: none;
+    color: #4a4a4a;
+    transition: 0.1s;
+    cursor: pointer;
   }
 
+  button#live-button {  
+    #live-icon {
+      color: red;
+      font-size: 13px;
+    }
+
+    #live {
+      font-size: 13px;
+      opacity: 0.9;
+      margin-left: 1px;
+      padding: 0 0 1.5px 0;
+    }
+    &:hover #live{
+      opacity: 1;
+    }
+  }
+  
   #progress-viz {
     flex: 1;
     width: 100%;
@@ -35,6 +54,7 @@
     cursor: pointer;
     background-clip: content-box;
     padding: 10px 0;
+    margin: 0 15px 0 10px;
     
     &:hover {
       height: 6px;
@@ -43,7 +63,7 @@
     .progress-bar {
       position: relative;
       height: 100%;
-      width: 70%;
+      width: 100%;
       background-color: red;
       
       .progress-thumb {

@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="src/stylesheets/styles.scss"></style>
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300&display=swap" rel="stylesheet"> 
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script src="dist/bundle.min.js" type="text/javascript"></script>
 </head>
 <body>
@@ -24,11 +25,7 @@
         {"id": "AD", "addr": "127.0.0.1:0003", "proxy": "http://127.0.0.1:8081/3"},
         {"id": "AE", "addr": "127.0.0.1:0004", "proxy": "http://127.0.0.1:8081/4"},
         {"id": "AF", "addr": "127.0.0.1:0005", "proxy": "http://127.0.0.1:8081/5"},
-        {"id": "AG", "addr": "127.0.0.1:0006", "proxy": "http://127.0.0.1:8081/6"},
-        {"id": "AH", "addr": "127.0.0.1:0007", "proxy": "http://127.0.0.1:8081/7"},
-        {"id": "AI", "addr": "127.0.0.1:0008", "proxy": "http://127.0.0.1:8081/8"},
-        {"id": "AJ", "addr": "127.0.0.1:0009", "proxy": "http://127.0.0.1:8081/9"},
-        {"id": "AK", "addr": "127.0.0.1:0010", "proxy": "http://127.0.0.1:8081/10"}
+        {"id": "AG", "addr": "127.0.0.1:0006", "proxy": "http://127.0.0.1:8081/6"}
 ]}
           </textarea>
           <button type="button" id="submitButton">Load</button>
@@ -45,17 +42,17 @@
           <div class="parameter">
             <input type="number" value="-1000" id="charge-value">
             <label for="charge-value">Charge value</label>
-            <button id="charge-update">Apply</button>
+            <button type="button" id="charge-update">Apply</button>
           </div>
           <div class="parameter">
             <input type="number" value="100" id="link-value">
             <label for="link-value">Link value</label>
-            <button id="link-update">Apply</button>
+            <button type="button" id="link-update">Apply</button>
           </div>
           <div class="parameter">
             <input type="number" value="20" id="node-radius">
             <label for="node-radius">Node radius</label>
-            <button id="radius-update">Apply</button>
+            <button type="button" id="radius-update">Apply</button>
           </div>
         </div>
       </div>
@@ -68,18 +65,25 @@
       <button type="button" id="resetButton">ZOOM RESET</button>
       <svg id="svg-graph"></svg>
       <div id="record-controls">
-        <button type="button" class="play-button">▶</button>
+        <div id="play-icon" class="material-icons">pause</div>
           <div id="progress-viz">
             <div class="progress-bar">
               <div class="progress-thumb"></div>
             </div>
           </div>
-        <button type="button" class="live-button">◉ LIVE</button>
+        <button type="button" id="live-button">
+          <span id="live-icon" class="material-icons">radio_button_checked</span>
+          <span id="live">LIVE</span>
+        </button>
+        
       </div>
     </div>
 
     <div id="messages-container">
-      <div id="messages"></div>
+      <div id="messages"> 
+        <button type="button" id="scroll-button">⬇</button>
+      </div>
+      <button type=button id="stop-button">◼ Stop</button>
     </div>
   </div>
 
