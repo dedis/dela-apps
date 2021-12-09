@@ -23,11 +23,11 @@ interface dataRcv {
 export function sayHi() {
   //document.addEventListener('mousemove', function(e) {e.preventDefault()})
 
-  document.getElementById('settings-btn').addEventListener('click', function () {
+  document.getElementById('settings-button').addEventListener('click', function () {
     togglePanel()
   })
 
-  document.getElementById('close-settings').addEventListener('click', function () {
+  document.getElementById('close-button').addEventListener('click', function () {
     togglePanel()
   })
 
@@ -95,6 +95,7 @@ class Viz {
     let userScroll: boolean
     let nbMsg: number
     let replayFromIdx: number = undefined
+    let speed:number
 
     const messages = document.getElementById("messages")
 
@@ -108,18 +109,21 @@ class Viz {
     stopListen()
     scrollListen()
     playListen()
+    speedListen()
     
     function messageListen() {
 
       removeScrollBtn()
 
-      document.getElementById("stop-button").innerText = "◼ Stop"
+      document.getElementById("stop-icon").innerText = "stop"
+      document.getElementById("stop-text").innerText = "Stop"
       document.getElementById("play-icon").innerText = "pause"
       document.getElementById("live-icon").style.color = "red"
       self.slider.bar.style.width = "100%"
       showSend = true
       userScroll = false
       nbMsg = 0
+      speed = 1
       self.data = []
       // liveListen()
       
@@ -190,13 +194,15 @@ class Viz {
     function playListen() {
       document.getElementById("play-icon").onclick = function(this:any) {
         if (this.innerText === "pause") {
-          this.innerText = "play_arrow"
+          
           // liveListen()
           // if (showSend === true) {
           // TO DO
           // }
+          // WORK WITH SHOWSENDDDDDDDD
           showSend = false
-          // TO DO: remember idx and let messages continue
+          replayFromIdx = nbMsg
+          this.innerText = "play_arrow"
         }
         else if(this.innerText === "play_arrow"){
           this.innerText = "pause"
@@ -236,6 +242,7 @@ class Viz {
             document.getElementById("play-icon").innerText = "replay"
             return
           }
+          console.log(Date.parse(msg.time))
           setTimeout(step, 1000)
         }, 1000) 
       }
@@ -255,18 +262,28 @@ class Viz {
 
     function stopListen() {
       document.getElementById("stop-button").onclick = function(this:any) {
-        if (this.innerText === "⟲ Restart") {
+        const icon = document.getElementById("stop-icon")
+        const txt = document.getElementById("stop-text")
+
+        if (txt.innerText === "Restart") {
           document.querySelectorAll('.message').forEach(e => e.remove());
           messageListen()
         }
-        else if (this.innerText === "◼ Stop") {
+        else if (txt.innerText === "Stop") {
           Viz.sources.forEach((e) => { e.close() })
           Viz.sources = []
-          this.innerText = "⟲ Restart";
+          txt.innerText = "Restart";
+          icon.innerText = "restart_alt"
           document.getElementById("live-icon").style.color = "#4a4a4a"
           document.getElementById("live-icon").style.opacity = "0.9"
           //document.getElementById("live-button").onclick = null
         }
+      }
+    }
+
+    function speedListen() {
+      document.getElementById("speed-button").onclick = function(){
+        console.log(speed)
       }
     }
 
@@ -304,7 +321,7 @@ class Viz {
  * accordingly.
  */
 function togglePanel() {
-  document.getElementById('settings-btn').classList.toggle('active')
+  document.getElementById('settings-button').classList.toggle('active')
   const content = document.getElementById('settings-panel')
   if (content.style.maxHeight) {
     content.style.maxHeight = null

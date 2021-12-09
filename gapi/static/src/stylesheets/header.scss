@@ -17,18 +17,17 @@
     }
   }
 
-  .more {
-    button {
-      border: none;
-      color: #4a4a4a;
-      padding: 14px 28px;
-      cursor: pointer;
-      background: transparent;
+  #settings-button {
+    border: none;
+    color: black;
+    padding: 14px 28px;
+    cursor: pointer;
+    background: transparent;
+    opacity: 0.8;
+    transition: 0.2s;
 
-      &:hover,
-      &.active {
-        font-weight: bold;
-      }
+    &:hover {
+      opacity: 1;
     }
   }
 
@@ -65,7 +64,7 @@
         button {
           margin: 7px 0 0 0;
           border: none;
-          color: #4a4a4a;
+          color: black;
           padding: 7px 14px;
           cursor: pointer;
           background: white;
@@ -83,14 +82,9 @@
       .parameters {
         padding: 10px;
 
-        input[type="checkbox"] {
-          padding: 5px;
-          width: 20px;
-          height: 20px;
-        }
-
         label {
           padding: 0 10px;
+          font-size: 16px;
         }
 
         .parameter {
@@ -102,16 +96,19 @@
       }
     }
 
-    button#close-settings {
+    #close-button {
+      color: black;
       position: absolute;
-      right: 10px;
-      bottom: 5px;
+      right: 15px;
+      bottom: 10px;
       background: transparent;
       border: none;
       cursor: pointer;
+      opacity: 0.8;
+      transition: 0.2s;
 
       &:hover {
-        font-weight: bold;
+        opacity: 1;
       }
     }
   }

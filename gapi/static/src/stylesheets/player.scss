@@ -4,12 +4,12 @@
   flex-direction: row;
   align-items: center;
   margin: 15px 10% 0;
+  color: black;
 
   #play-icon {
     font-size: 24px;
-    opacity: 0.9;
-    color: #4a4a4a;
-    transition: 0.1s;
+    opacity: 0.8;
+    transition: 0.2s;
     cursor: pointer;
 
     &:hover {
@@ -17,30 +17,28 @@
     }
   }
 
-  button {
+  #live-button {
     display: flex;
     flex-direction: row;
     align-items: center;
     background-color: transparent;
     border: none;
-    color: #4a4a4a;
-    transition: 0.1s;
+    transition: 0.2s;
     cursor: pointer;
-  }
 
-  button#live-button {  
-    #live-icon {
+    #live-icon {  
       color: red;
-      font-size: 13px;
+      font-size: inherit;
     }
 
-    #live {
-      font-size: 13px;
-      opacity: 0.9;
+    #live-text {
       margin-left: 1px;
       padding: 0 0 1.5px 0;
+      transition: 0.2s;
+      opacity: 0.8;
     }
-    &:hover #live{
+
+    &:hover #live-text{
       opacity: 1;
     }
   }
@@ -54,7 +52,7 @@
     cursor: pointer;
     background-clip: content-box;
     padding: 10px 0;
-    margin: 0 15px 0 10px;
+    margin: 0 15px 0 7px;
     
     &:hover {
       height: 6px;
@@ -84,6 +82,18 @@
   #progress-viz:hover .progress-thumb {
     transition: ease-out 0.1s;
     transform: scale(1);
+  }
+
+  #speed-button {
+    opacity: 0.8;
+    margin-left: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 0 2px 0;
+
+    &:hover {
+      opacity: 1;
+    }
   }
 }
 

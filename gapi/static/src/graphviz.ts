@@ -93,11 +93,11 @@ class GraphViz {
 
     gNode.append('circle')
       .attr('r', this.node_rad)
-      .attr("font-size", this.node_rad + "px")
       .attr('fill', (d: NodesEntity) => d.color)
 
     gNode.append('text')
       .text((d: NodesEntity) => d.id)
+      .attr("font-size", this.node_rad + "px")
       .attr('class', 'label')
 
     gNode.append('title')
