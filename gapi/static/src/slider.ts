@@ -3,7 +3,7 @@ export { Slider }
 class Slider {
 
   slider: HTMLElement | null
-  bar: HTMLElement | null
+  bar: HTMLElement | null
   mDown: boolean
   beginX: number
   positionX: number

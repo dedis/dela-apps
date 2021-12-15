@@ -49,9 +49,9 @@ body {
       user-select: none;
 
       #reset-button{
-        position: relative;
+        border: none;
         margin-left: auto;
-        background-color: #ffffff;
+        background-color: transparent;
         color: black;
         padding: 10px;
         cursor: pointer;
@@ -93,8 +93,8 @@ body {
           text-align: center;
           background-color: transparent;
           cursor: pointer;
-          border: 1px hidden black;
-          border-radius: 3px;
+          // border: 1px hidden black;
+          // border-radius: 3px;
 
           .time {
             flex: 1;
@@ -113,6 +113,21 @@ body {
           }
           &:hover {
             background: #f7f7f7;
+          }
+        }
+
+        .selected {
+          background-color: #dfdfdf;
+          &:hover {
+            background-color: #dfdfdf;
+          }
+        }
+
+        .new {
+          color: white;
+          background-color: red;
+          &:hover {
+            background-color: red;
           }
         }
 
@@ -136,27 +151,33 @@ body {
 
       
 
-      #stop-button {
+      #stop {
         display: flex;
-        flex-direction: row;
         align-items: center;
-        background-color: white;
-        color: black;
-        font-size: 16px;
-        padding: 2px 10px;
-        margin: 10px auto 50px;
-        cursor: pointer;
-        transition: 0.2s;
+        justify-content: center;
+        height: 50px;
         opacity: 0.8;
+        transition: 0.2s;
 
+        #stop-icon {
+          font-size: 16px;
+          margin-right: -18px;
+        }
+
+        button#stop-button {
+          flex: 0 0 auto;
+          border: none;
+          padding: 0 0 1px 18px;
+          font-size: 16px;
+          height: 100%;
+          background-color: transparent;
+          color: black;
+          cursor: pointer;
+
+          
+        }
         &:hover {
           opacity: 1;
-        } 
-        #stop-icon {
-          font-size: inherit;
-        }
-        #stop-text{
-          padding: 0 0 1px 0;
         } 
       }
     }

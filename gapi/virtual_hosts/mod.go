@@ -45,14 +45,15 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"strings"
 	"time"
 )
 
-const dataFormat = "data:{\"time\":\"%s\", \"toAddr\":\"%s\"}\n\n"
-const timeFormat = "03:04:05 .999"
+const dataFormat = "data:{\"time\":\"%d\", \"toAddr\":\"%s\"}\n\n"
 
 const n = 6
 
@@ -85,6 +86,11 @@ func main() {
 
 	go http.ListenAndServe("localhost:8081", server)
 
+	resp, _ := http.Get("http://127.0.0.1:8081")
+	body, _ := ioutil.ReadAll(resp.Body)
+	sb := string(body)
+	log.Printf(sb)
+
 	// Running Main Server
 	http.ListenAndServe("localhost:8080", main_server)
 }
@@ -107,7 +113,7 @@ func getServerFunc() func(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-time.After(time.Millisecond * 500 * time.Duration(rand.Intn(10))):
 				randomDest := fmt.Sprintf("127.0.0.1:%04d", rand.Intn(n+1))
-				fmt.Fprintf(w, dataFormat, time.Now().Format(timeFormat), randomDest)
+				fmt.Fprintf(w, dataFormat, time.Now().UnixMilli(), randomDest)
 
 				flusher.Flush()
 			case <-r.Context().Done():

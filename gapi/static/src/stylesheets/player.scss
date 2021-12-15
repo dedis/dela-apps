@@ -1,13 +1,18 @@
 
 #svg-container #record-controls {
   display:flex;
+  height: 48px;
+  --h: 48px;
   flex-direction: row;
   align-items: center;
-  margin: 15px 10% 0;
-  color: black;
+  margin: 0 10%;
 
-  #play-icon {
-    font-size: 24px;
+  button {
+    flex: 0 0 auto;
+    border: none;
+    height: 100%;
+    background-color: transparent;
+    color: black;
     opacity: 0.8;
     transition: 0.2s;
     cursor: pointer;
@@ -17,42 +22,33 @@
     }
   }
 
-  #live-button {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    background-color: transparent;
-    border: none;
-    transition: 0.2s;
-    cursor: pointer;
+  button#play-icon {
+    width: 40px;
+    padding: 0;
+    font-size: 24px;
+  }
 
-    #live-icon {  
-      color: red;
-      font-size: inherit;
-    }
+  #live-icon {  
+    color: red;
+    font-size: 100%;
+    margin: 0 -12px 0 16px;
+  }
 
-    #live-text {
-      margin-left: 1px;
-      padding: 0 0 1.5px 0;
-      transition: 0.2s;
-      opacity: 0.8;
-    }
-
-    &:hover #live-text{
-      opacity: 1;
-    }
+  button#live-button {
+    width: 48px;
+    font-size: 100%;
+    padding: 0 0 1px 3px;
+    z-index: 1;
   }
   
   #progress-viz {
-    flex: 1;
     width: 100%;
     height: 5px;
     transition: 0.1s;    
     background-color: #dfdfdf;
-    cursor: pointer;
     background-clip: content-box;
     padding: 10px 0;
-    margin: 0 15px 0 7px;
+    cursor: pointer;
     
     &:hover {
       height: 6px;
@@ -84,16 +80,64 @@
     transform: scale(1);
   }
 
-  #speed-button {
-    opacity: 0.8;
-    margin-left: 10px;
-    font-size: 20px;
-    cursor: pointer;
-    padding: 0 0 2px 0;
+  .dropup {
+    position: relative;
+    display: inline-block;
+    flex: 0 0 auto;
+    height: 100%;
 
-    &:hover {
-      opacity: 1;
+    button {
+      font-size: 24px;
+      width: 100%;
+      padding: 0;
     }
+
+    .dropup-content {
+      display: block;
+      position: absolute;
+      background-color: white;
+      bottom: var(--h);
+      box-shadow: 0px 0px 3px 0px rgba(0,0,0,0.2);
+      z-index: 1;
+      visibility:hidden;
+      opacity:0;
+      transition:visibility 0s ease-out 0.2s,opacity 0.2s ease-out;
+
+      button {
+        font-size: 100%;
+        width: 100%;
+        height: 30px;
+        transition: unset;
+
+        &:hover {
+          background-color: #f1f1f1
+        }
+      }
+    }
+
+    #speed-dropup-content {
+      width: 40px;
+      right: -5px;
+    }
+
+    #replay-type-dropup-content {
+      width: 100px;
+      right: -26px;
+    }
+
+    &:hover .dropup-content{
+      visibility:visible;
+      opacity:1;
+      transition-delay:0s;
+      transition-timing-function: ease-in;
+    }
+  }
+  #speed-dropup {
+    width: 30px;
+  }
+
+  #replay-type-dropup {
+    width: 48px;
   }
 }
 
