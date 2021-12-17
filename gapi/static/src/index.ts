@@ -8,7 +8,8 @@ import { Slider } from './slider'
 
 // format of saved and manipulated data
 interface datai {
-  time: string
+  msgID: string
+  timeSent: string
   fromId: string
   toId: string
   color: string
@@ -16,7 +17,7 @@ interface datai {
 
 // format of received data
 interface dataRcv {
-  time: string
+  timeSent: string
   toAddr: string
 }
 
@@ -101,11 +102,11 @@ class Viz {
     speedListen()
     sliderListen()
     liveListen()
+    startLive()
 
     function messageListen() {
 
       clearTimeout(Viz.timeoutID)
-      startLive()
       
       document.getElementById("stop-icon").innerText = "stop_circle"
       document.getElementById("stop-button").innerText = "Stop"
@@ -114,13 +115,15 @@ class Viz {
 
       self.graph.nodes.forEach((node) => {
         const trafficSrc = new EventSource(node.proxy)
+
         Viz.sources.push(trafficSrc)
         trafficSrc.onmessage = function (e) {
           const dRcv: dataRcv = JSON.parse(e.data)
 
           if (add2Id.get(dRcv.toAddr) !== undefined) {
             const msg: datai = {
-              time: dRcv.time,
+              msgID: e.lastEventId,
+              timeSent: dRcv.timeSent,
               fromId: node.id,
               toId: add2Id.get(dRcv.toAddr),
               color: node.color
@@ -202,7 +205,7 @@ class Viz {
           // let date = new Date(parseInt(msg.time))
           // console.log(date)
           Viz.timeoutID = setTimeout(step, 1000/speed)
-        }, 1) 
+        }, 10) 
       }
     }
 
@@ -221,7 +224,7 @@ class Viz {
       divArrow.appendChild(document.createTextNode(' ⟶ '))
 
       const divTime = document.createElement('div')
-      divTime.appendChild(document.createTextNode(msg.time))
+      divTime.appendChild(document.createTextNode(msg.msgID))
       divTime.className = "time"
 
       divIdToId.appendChild(divFromId)
@@ -245,6 +248,7 @@ class Viz {
 
         if (txt.innerText === "Restart") {
           document.querySelectorAll('.message').forEach(e => e.remove());
+          startLive(true)
           messageListen()
         }
         else if (txt.innerText === "Stop") {
@@ -252,39 +256,49 @@ class Viz {
           Viz.sources = []
           txt.innerText = "Restart";
           icon.innerText = "restart_alt"
-          pauseLive()
+          pauseLive(true)
         }
       }
     }
 
-    function startLive() {
-      if (liveOn === false) {
+    function startLive(restart=false) {
+      const liveButtonStyle = document.getElementById("live-button").style
+      
+      if (restart === true)
+        liveButtonStyle.cursor = "default"
+
+      if (liveOn === false && liveButtonStyle.cursor !== "not-allowed") {
+        const liveIconStyle = document.getElementById("live-icon").style
+
         clearTimeout(Viz.timeoutID)
         removeScrollBtn()
         liveOn = true
+        liveIconStyle.color = "red"
+        liveIconStyle.opacity = "1"
+        liveIconStyle.cursor = "default"
         autoScroll = true
         messages.scrollTop = messages.scrollHeight
-        const liveStyle = document.getElementById("live-icon").style
-        liveStyle.color = "red"
-        liveStyle.opacity = "1"
         self.slider.bar.style.width = "100%"
-        document.getElementById("live-button").style.cursor = "default"
-        document.getElementById("play-icon").innerText = "pause"
-
+        document.getElementById("play-icon").innerText = "pause";
+        liveButtonStyle.cursor = "default"
       }
     }
 
-    function pauseLive() {
+    function pauseLive(stop=false) {
+      const liveButtonStyle = document.getElementById("live-button").style
+
+      if (stop === true)
+        liveButtonStyle.cursor = "not-allowed"
+      
       if (liveOn === true) {
+        const liveIconStyle = document.getElementById("live-icon").style
+
         liveOn = false
         autoScroll = false
-        const liveStyle = document.getElementById("live-icon").style
-        liveStyle.color = "#4a4a4a"
-        liveStyle.opacity = "0.9"
-        if (document.getElementById("stop-button").innerText === "Restart")
-          document.getElementById("live-button").style.cursor = "not-allowed"
-        else
-          document.getElementById("live-button").style.cursor = "pointer"
+        liveIconStyle.color = "#4a4a4a"
+        liveIconStyle.opacity = "0.9"
+        if (stop !== true)
+          liveButtonStyle.cursor = "pointer"
       }
     }
 
