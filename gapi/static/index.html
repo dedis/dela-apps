@@ -1,19 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset=utf-8>
   <title></title>
-  <link rel="stylesheet" href="src/stylesheets/styles.scss"></style>
-  <link rel="preconnect" href="https://fonts.googleapis.com"> 
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> 
+  <link rel="stylesheet" href="src/stylesheets/styles.scss">
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;400;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script src="dist/bundle.min.js" type="text/javascript"></script>
 </head>
+
 <body>
 
   <div class="header">
-    <a class="logo" href="https://github.com/dedis/dela-apps" target="_blank"><img src="assets/logo.png" alt="logo"/></a>
+    <a class="logo" href="https://github.com/dedis/dela-apps" target="_blank"><img src="assets/logo.png"
+        alt="logo" /></a>
     <button type="button" id="settings-button" class="material-icons">settings</button>
 
     <div id="settings-panel" class="content-wrap">
@@ -21,9 +25,9 @@
         <div class="json-config">
           <textarea id="nodesData" rows="10" cols="50">
             {"nodes": [
-        {"id": "AB", "addr": "127.0.0.1:0001", "proxy": "http://127.0.0.1:8081/1/sent"},
-        {"id": "AC", "addr": "127.0.0.1:0002", "proxy": "http://127.0.0.1:8081/2/sent"},
-        {"id": "AD", "addr": "127.0.0.1:0003", "proxy": "http://127.0.0.1:8081/3/sent"}
+        {"id": "AB", "addr": "127.0.0.1:0001", "proxy": "http://127.0.0.1:8081/1"},
+        {"id": "AC", "addr": "127.0.0.1:0002", "proxy": "http://127.0.0.1:8081/2"},
+        {"id": "AD", "addr": "127.0.0.1:0003", "proxy": "http://127.0.0.1:8081/3"}
 ]}
           </textarea>
           <button type="button" id="submit-button">Load</button>
@@ -51,7 +55,7 @@
   </div>
 
   <div id="viz">
-    <div id="svg-container">
+    <div id="svg-graph-container">
       <button type="button" id="reset-button">Zoom Reset</button>
       <svg id="svg-graph"></svg>
       <div id="record-controls">
@@ -63,7 +67,7 @@
         </div>
         <div id="live-icon" class="material-icons">radio_button_checked</div>
         <button type="button" id="live-button">LIVE</button>
-        
+
         <div id="speed-dropup" class="dropup">
           <button type="button" class="material-icons">av_timer</button>
           <div id="speed-dropup-content" class="dropup-content">
@@ -72,7 +76,7 @@
             <button class="speed-button" href="#">2</button>
           </div>
         </div>
-        
+
         <div id="replay-type-dropup" class="dropup">
           <button type="button" class="material-icons">video_settings</button>
           <div id="replay-type-dropup-content" class="dropup-content">
@@ -83,9 +87,11 @@
       </div>
     </div>
 
-    <div id="messages-container">
-      <div id="messages"> 
-        <button type="button" id="scroll-button">⬇</button>
+    <div id="chart-container">
+      <button type="button" id="scroll-button">⬇</button>
+      <svg id="svg-labels"></svg>
+      <div id="svg-chart-container">
+        <svg id="svg-chart"></svg>
       </div>
       <div id="stop">
         <div id="stop-icon" class="material-icons">stop_circle</div>
@@ -100,8 +106,6 @@
   </script>
 </body>
 
-  
+
 
 </html>
-
-

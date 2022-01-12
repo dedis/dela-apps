@@ -9,7 +9,8 @@ import (
 	"time"
 )
 
-const dataFormat = "data:{\"timeSent\":\"%d\", \"toAddr\":\"%s\"}\nid:%d\n\n"
+const dataSent = "data:{\"message\":\"%s\", \"toAddr\":\"%s\", \"timeSent\":\"%d\", \"id\":\"%d\"}\n\n"
+const dataRecv = "data:{\"message\":\"%s\", \"fromAddr\":\"%s\", \"timeRecv\":\"%d\", \"id\":\"%d\"}\n\n"
 
 const n = 3
 
@@ -91,20 +92,24 @@ func getSentFunc(nodes *nodes, nodeIndex int) func(http.ResponseWriter, *http.Re
 
 		for {
 			select {
-			case <-time.After(time.Millisecond * 500 /** time.Duration(rand.Intn(10))*/):
-				destIndex := rand.Intn(n) + 1
-				randomDest := fmt.Sprintf("127.0.0.1:%04d", destIndex)
+			case <-time.After(time.Millisecond * 4000 /** time.Duration(rand.Intn(10))*/):
 
-				message := fmt.Sprintf(dataFormat, time.Now().UnixMilli(), randomDest, id)
+				destIndex := rand.Intn(n) + 1
+				for destIndex == nodeIndex {
+					destIndex = rand.Intn(n) + 1
+				}
+				toAddr := fmt.Sprintf("127.0.0.1:%04d", destIndex)
+				msg := strings.Repeat("Hello this is a very long message. ", 15)
+				message := fmt.Sprintf(dataSent, msg, toAddr, rand.Int63n(100), id)
 				fmt.Fprint(w, message)
 				flusher.Flush()
 
 				go func(node node, id int) {
-					sourceAddr := fmt.Sprintf("127.0.0.1:%04d", nodeIndex)
-					message := fmt.Sprintf(dataFormat, time.Now().UnixMilli(), sourceAddr, id)
-
 					// notify the receiving node after 1 second
 					time.Sleep(time.Second)
+					msg := strings.Repeat("Hello this is a very long message. ", 15)
+					fromAddr := fmt.Sprintf("127.0.0.1:%04d", nodeIndex)
+					message := fmt.Sprintf(dataRecv, msg, fromAddr, rand.Int63n(100)+10, id)
 					node.incomings <- message
 				}(nodes.get(destIndex), id)
 
@@ -137,48 +142,19 @@ func getRecvFunc(node node) func(http.ResponseWriter, *http.Request) {
 		for {
 			select {
 			case msg := <-node.incomings:
-				fmt.Println("message received:", msg)
 				fmt.Fprint(w, msg)
 				flusher.Flush()
 
 			case <-r.Context().Done():
+				select {
+				case <-node.incomings:
+				case <-time.After(time.Millisecond * 1500):
+				}
 				return
 			}
 		}
 	}
 }
-
-// func getServerRecvFunc(w http.ResponseWriter, r *http.Request) {
-
-// 	flusher, ok := w.(http.Flusher)
-
-// 	if !ok {
-// 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "text/event-stream")
-// 	w.Header().Set("Cache-Control", "no-cache")
-// 	w.Header().Set("Connection", "keep-alive")
-// 	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-// 	for {
-// 		select {
-// 		case <-time.After(time.Millisecond * 3000 /** time.Duration(rand.Intn(10))*/):
-// 			path := r.URL.Path[:len(r.URL.Path)-4]
-
-// 			for len(messages[path]) > 0 {
-// 				n := len(messages[path]) - 1
-// 				fmt.Fprint(w, messages[path][n])
-// 				messages[path] = messages[path][:n]
-// 				flusher.Flush()
-// 			}
-
-// 		case <-r.Context().Done():
-// 			return
-// 		}
-// 	}
-// }
 
 func printConfig() {
 	out := new(strings.Builder)
@@ -187,19 +163,12 @@ func printConfig() {
 	lines := make([]string, n)
 	for i := 1; i <= n; i++ {
 		lines[i-1] = fmt.Sprintf("\t{\"id\": \"%s\", \"addr\": \"127.0.0.1:%04d\", "+
-			"\"proxy\": \"http://127.0.0.1:8081/%d/sent\"}", getID(i), i, i)
+			"\"proxy\": \"http://127.0.0.1:8081/%d\"}", getID(i), i, i)
 	}
 
 	out.WriteString(strings.Join(lines, ",\n"))
 	out.WriteString("\n]}")
 	fmt.Printf("\n------------\nVisualization Configuration:\n------------\n\n%s\n\n------------\n", out.String())
-
-	out2 := new(strings.Builder)
-	for i := 1; i <= n; i++ {
-		lines[i-1] = fmt.Sprintf("\"http://127.0.0.1:8081/%d/recv\"", i)
-	}
-	out2.WriteString(strings.Join(lines, ", "))
-	fmt.Printf("JS Server Configuration:\n------------\n\nsources = [%s]\n\n------------\n", out2.String())
 }
 
 // getID return a string of form AA to ZZ
