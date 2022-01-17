@@ -15,7 +15,7 @@ const dataRecv = "data:{\"message\":\"%s\", \"fromAddr\":\"%s\", \"timeRecv\":\"
 const n = 3
 
 func newNodes(n int) *nodes {
-	s := make(map[int]node)
+	s := make(map[int]*node)
 
 	for i := 1; i <= n; i++ {
 		s[i] = newNode()
@@ -28,24 +28,25 @@ func newNodes(n int) *nodes {
 
 type nodes struct {
 	sync.Mutex
-	s map[int]node
+	s map[int]*node
 }
 
-func (n *nodes) get(i int) node {
+func (n *nodes) get(i int) *node {
 	n.Lock()
 	defer n.Unlock()
 
 	return n.s[i]
 }
 
-func newNode() node {
-	return node{
+func newNode() *node {
+	return &node{
 		incomings: make(chan string, 100),
 	}
 }
 
 type node struct {
 	incomings chan string
+	isStopped bool
 }
 
 func main() {
@@ -61,10 +62,10 @@ func main() {
 
 	for i := 1; i <= n; i++ {
 		server.HandleFunc(fmt.Sprintf("/%d/sent", i), getSentFunc(nodes, i))
-	}
-
-	for i := 1; i <= n; i++ {
 		server.HandleFunc(fmt.Sprintf("/%d/recv", i), getRecvFunc(nodes.get(i)))
+
+		server.HandleFunc(fmt.Sprintf("/%d/start", i), getStartFunc(nodes.get(i)))
+		server.HandleFunc(fmt.Sprintf("/%d/stop", i), getStopFunc(nodes.get(i)))
 	}
 
 	printConfig()
@@ -85,6 +86,8 @@ func getSentFunc(nodes *nodes, nodeIndex int) func(http.ResponseWriter, *http.Re
 			return
 		}
 
+		currentNode := nodes.get(nodeIndex)
+
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
@@ -94,17 +97,23 @@ func getSentFunc(nodes *nodes, nodeIndex int) func(http.ResponseWriter, *http.Re
 			select {
 			case <-time.After(time.Millisecond * 4000 /** time.Duration(rand.Intn(10))*/):
 
+				// if the node is stopped it won't send messages
+				if currentNode.isStopped {
+					continue
+				}
+
 				destIndex := rand.Intn(n) + 1
 				for destIndex == nodeIndex {
 					destIndex = rand.Intn(n) + 1
 				}
+
 				toAddr := fmt.Sprintf("127.0.0.1:%04d", destIndex)
 				msg := strings.Repeat("Hello this is a very long message. ", 15)
 				message := fmt.Sprintf(dataSent, msg, toAddr, rand.Int63n(100), id)
 				fmt.Fprint(w, message)
 				flusher.Flush()
 
-				go func(node node, id int) {
+				go func(node *node, id int) {
 					// notify the receiving node after 1 second
 					time.Sleep(time.Second)
 					msg := strings.Repeat("Hello this is a very long message. ", 15)
@@ -124,7 +133,7 @@ func getSentFunc(nodes *nodes, nodeIndex int) func(http.ResponseWriter, *http.Re
 
 // getRecvFunc listen on the incoming channel of the node and return the
 // received message. Must be called only once per node.
-func getRecvFunc(node node) func(http.ResponseWriter, *http.Request) {
+func getRecvFunc(node *node) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		flusher, ok := w.(http.Flusher)
@@ -154,6 +163,32 @@ func getRecvFunc(node node) func(http.ResponseWriter, *http.Request) {
 			}
 		}
 	}
+}
+
+// getStartFunc notifies the node that it should be started. Has no effect if it
+// is already started.
+func getStartFunc(node *node) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("starting node")
+		node.start()
+	}
+}
+
+// getStopFunc notifies the node that it should be stopped. Has no effect if it
+// is already stopped.
+func getStopFunc(node *node) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("stopping node")
+		node.stop()
+	}
+}
+
+func (node *node) stop() {
+	node.isStopped = true
+}
+
+func (node *node) start() {
+	node.isStopped = false
 }
 
 func printConfig() {
