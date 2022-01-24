@@ -1,4 +1,6 @@
-.header {
+
+body .header {
+  height: 50px;
   background: #f7f7f7;
   box-shadow: 0px -9px 22px #000;
   padding: 0 30px;
@@ -8,7 +10,8 @@
   justify-content: space-between;
   align-items: center;
   position: relative;
-
+  z-index: 3;
+  
   .logo {
     max-width: 100px;
 

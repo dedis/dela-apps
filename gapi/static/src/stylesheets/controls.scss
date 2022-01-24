@@ -1,11 +1,11 @@
 
-#svg-graph-container #record-controls {
+#viz #record-controls {
   display:flex;
   height: 48px;
   --h: 48px;
   flex-direction: row;
   align-items: center;
-  margin: 0 10%;
+  margin: 0 100px 50px 100px;
 
   button {
     flex: 0 0 auto;
@@ -43,16 +43,17 @@
   }
   
   #progress-viz {
+    --factor: 1.5;
     width: 100%;
-    height: 5px;
-    transition: 0.1s;    
+    height: 4px;
+    transition: transform 0.2s;    
     background-color: #dfdfdf;
     background-clip: content-box;
     padding: 10px 0;
     cursor: pointer;
     
     &:hover {
-      height: 6px;
+      transform: scaleY(var(--factor));
     }
     
     .progress-bar {
@@ -78,7 +79,7 @@
   }
   #progress-viz:hover .progress-thumb {
     transition: ease-out 0.1s;
-    transform: scale(1);
+    transform: scale(1, calc(1/var(--factor)));
   }
 
   .dropup {

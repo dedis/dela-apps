@@ -19,7 +19,7 @@ class Slider {
   listen() {
     const self = this
 
-    self.slider.addEventListener('mousedown', function (e: any) {
+    self.slider.addEventListener('mousedown', function (e: MouseEvent) {
       if (e.button == 0) { // Judgment click the left button
         self.mDown = true
         self.beginX = e.offsetX
@@ -30,19 +30,14 @@ class Slider {
         self.bar.style.width = self.per + '%'
       }
     })
-    document.addEventListener('mousemove', function (e) {
+    document.addEventListener('mousemove', function (e: MouseEvent) {
       if (self.mDown) {
         var moveX = e.clientX - self.beginClientX
-        self.positionX = (self.beginX + moveX > self.sliderLong) ? 
-                          self.sliderLong : (self.beginX + moveX < 0) ? 0 : self.beginX + moveX
+        self.positionX = (self.beginX + moveX > self.sliderLong) ?
+          self.sliderLong : (self.beginX + moveX < 0) ? 0 : self.beginX + moveX
         self.per = self.positionX / self.sliderLong * 100
         self.bar.style.width = self.per + '%'
         e.preventDefault()
-      }
-    })
-    document.addEventListener('mouseup', function (e) {
-      if (e.button == 0) {
-        self.mDown = false
       }
     })
   }

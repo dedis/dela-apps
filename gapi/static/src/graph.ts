@@ -1,10 +1,11 @@
 export { Graph }
+
 import * as d3 from 'd3'
 import './stylesheets/styles.scss'
-import { nodes, NodesEntity } from './nodes'
-import { easeLinear, SimulationNodeDatum } from 'd3'
+import { NodesEntity } from './nodes'
 import { datai } from './message'
 import { SENT, RECV, REPLAY } from './message'
+import { getPalette } from './utils'
 
 /**
  * Graph implements the primitives to create and update the graph.
@@ -23,7 +24,7 @@ class Graph {
   links: Array<{ source: string; target: string }>;
 
   // the d3 simulation
-  simulation: d3.Simulation<SimulationNodeDatum, undefined>
+  simulation: d3.Simulation<d3.SimulationNodeDatum, undefined>
   // the simulation's links
   link: d3.Selection<SVGElement, {}, SVGGElement, unknown>
 
@@ -45,9 +46,9 @@ class Graph {
     this.createdLinks = new Map<string, Map<string, boolean>>()
 
     // Set each node's color 
-    const color = d3.scaleSequential(d3.interpolateRainbow).domain([0, this.nodes.length])
+    const palette = getPalette(this.nodes.length)
     this.nodes.forEach((n, i) => {
-      n.color = color(i)
+      n.color = palette(i)
     })
 
     const self = this
@@ -112,6 +113,7 @@ class Graph {
       .on('tick', ticked)
 
     function ticked() {
+      // self.updateTransition()
       self.link
         .attr('x1', (d: any) => d.source.x)
         .attr('y1', (d: any) => d.source.y)
@@ -127,7 +129,7 @@ class Graph {
       d3.select(this).select(".graph").attr("transform", d3.event.transform)
     }
 
-    function dragstarted(d: SimulationNodeDatum) {
+    function dragstarted(d: d3.SimulationNodeDatum) {
       if (!d3.event.active) self.simulation.alphaTarget(0.3).restart()
       d.fx = d.x
       d.fy = d.y
@@ -136,12 +138,12 @@ class Graph {
         .attr("stroke-width", 3)
     }
 
-    function dragged(d: SimulationNodeDatum) {
+    function dragged(d: d3.SimulationNodeDatum) {
       d.fx = d3.event.x
       d.fy = d3.event.y
     }
 
-    function dragended(d: SimulationNodeDatum) {
+    function dragended(d: d3.SimulationNodeDatum) {
       if (!d3.event.active) self.simulation.alphaTarget(0)
       d.fx = null;
       d.fy = null;
@@ -200,8 +202,19 @@ class Graph {
 
   updateNodeRadius(val: number) {
     this.node_rad = val
-    this.svg.selectAll("circle").attr('r', this.node_rad)
-    this.svg.selectAll("text.label").attr("font-size", this.node_rad + "px")
+    this.svg
+      .select(".nodes")
+      .selectAll("circle")
+      .attr('r', this.node_rad)
+
+    this.svg
+      .select(".nodes")
+      .selectAll("text.label")
+      .attr("font-size", this.node_rad + "px")
+
+    this.svg
+      .selectAll(".graph-message")
+      .attr("r", this.node_rad / 2)
   }
 
   reportWindowSize() {
@@ -213,13 +226,13 @@ class Graph {
   }
 
   /**
-   * showSend creates the link of not already present and displays a circle from
+   * showMsgTransition creates the link of not already present and displays a circle from
    * the source to the destination to picture a data transfer.
    * @param fromNode id of the source node
    * @param toNode id of the destination node
    * @param color color to use for the circle
    */
-  showSend(msg: datai, idx: number, status: number) {
+  showMsgTransition(msg: datai, idx: number, status: number) {
     const self = this
     if (!isConnected(msg) && !isConnected(msg)) {
 
@@ -249,10 +262,18 @@ class Graph {
 
     if (status === SENT) {
       this.svg
+        .selectAll(".graph-message")
+        .each(function (this: SVGElement): void {
+          const id = parseInt(this.id.slice(1))
+          if (id >= idx)
+            this.id = "_" + (id + 1)
+        })
+
+      this.svg
         .select(".graph")
         .append('circle')
-        .attr("class", "message-node")
-        .attr('id', 'msg' + idx)
+        .attr("class", "graph-message")
+        .attr('id', '_' + idx)
         .attr('cx', nodeAx)
         .attr('cy', nodeAy)
         .style('fill', msg.color)
@@ -260,20 +281,16 @@ class Graph {
         .style('stroke', '#aaa')
         .attr('r', this.node_rad / 2)
         .transition()
-        .ease(easeLinear)
+        .ease(d3.easeLinear)
         .duration(400)
         .attr('cx', halfDistx)
         .attr('cy', halfDisty)
-      // .style("fill","blue")
-      // .attr('r', this.node_rad / 7)
-      // .attr("pointer-events", "none")
-      // .remove()
     }
     else if (status === RECV) {
       this.svg
-        .select('#msg' + idx)
+        .select('#_' + idx)
         .transition()
-        .ease(easeLinear)
+        .ease(d3.easeLinear)
         .duration(400)
         .attr('cx', nodeBx)
         .attr('cy', nodeBy)
@@ -284,8 +301,8 @@ class Graph {
       this.svg
         .select(".graph")
         .append('circle')
-        .attr("class", "message-node")
-        .attr('id', 'msg' + idx)
+        .attr("class", "graph-message")
+        .attr('id', '_' + idx)
         .attr('cx', nodeAx)
         .attr('cy', nodeAy)
         .style('fill', msg.color)
@@ -293,7 +310,7 @@ class Graph {
         .style('stroke', '#aaa')
         .attr('r', this.node_rad / 2)
         .transition()
-        .ease(easeLinear)
+        .ease(d3.easeLinear)
         .duration(time)
         .attr('cx', nodeBx)
         .attr('cy', nodeBy)
@@ -313,12 +330,47 @@ class Graph {
     }
   }
 
-  clearMsgNodes(list: Array<number> = null) {
-    if (list === null)
-      this.svg.selectAll(".message-node").remove()
+  // updateTransition() {
+
+  //   const self = this
+  //   this.svg
+  //     .selectAll(".message-node")
+  //     .each(function (this: SVGElement) {
+  //       const msg = d3.select(this)
+  //       const id = parseInt(this.id.slice(1))
+  //       const status = msg.classed("sent") ? SENT : msg.classed("recv") ? RECV : REPLAY
+
+  //       const nodeA: any = d3.select(`#${self..fromNode}`).node()
+  //       const nodeAMatrix = nodeA.transform.baseVal[0].matrix
+  //       const nodeAx = nodeAMatrix.e
+  //       const nodeAy = nodeAMatrix.f
+
+  //       const nodeB: any = d3.select(`#${msg.toNode}`).node()
+  //       const nodeBMatrix = nodeB.transform.baseVal[0].matrix
+  //       const nodeBx = nodeBMatrix.e
+  //       const nodeBy = nodeBMatrix.f
+
+  //       const halfDistx = (nodeBx + nodeAx) / 2
+  //       const halfDisty = (nodeBy + nodeAy) / 2
+
+  //       switch (status) {
+  //         case SENT:
+  //           break
+  //         case RECV:
+  //           break
+  //         case REPLAY:
+  //           break
+  //       }
+
+  //     })
+  // }
+
+  clearMsgNodes(list: Array<number> = undefined) {
+    if (list === undefined)
+      this.svg.selectAll(".graph-message").remove()
     else {
       list.forEach(idx => {
-        this.svg.select("#msg" + idx).remove()
+        this.svg.select("#_" + idx).remove()
       })
     }
   }
@@ -337,13 +389,13 @@ class Graph {
     const posx = nodeAx + per * (nodeBx - nodeAx)
     const posy = nodeAy + per * (nodeBy - nodeAy)
 
-    const msgNode = this.svg.select('#msg' + idx)
+    const msgNode = this.svg.select('#_' + idx)
     if (msgNode.empty()) {
       this.svg
         .select(".graph")
         .append('circle')
-        .attr("class", "message-node")
-        .attr('id', 'msg' + idx)
+        .attr("class", "graph-message")
+        .attr('id', '_' + idx)
         .attr('cx', posx)
         .attr('cy', posy)
         .style('fill', msg.color)

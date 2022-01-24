@@ -4,11 +4,10 @@ import { Slider } from './slider'
 import { datai, dataSent, dataRecv } from './message'
 import { SENT, RECV, REPLAY } from './message'
 import { Chart } from './chart'
+import { Resizer } from './resizer'
 import { getSortedIdx } from './utils'
 
 export function sayHi() {
-  //document.addEventListener('mousemove', function(e) {e.preventDefault()})
-
   document.getElementById('settings-button').addEventListener('click', function () {
     togglePanel()
   })
@@ -40,6 +39,8 @@ class Viz {
 
   slider: Slider
 
+  resizer: Resizer
+
   constructor() {
     const inputData = document.getElementById('nodesData') as HTMLInputElement
     this.nodes = JSON.parse(inputData.value)
@@ -47,8 +48,6 @@ class Viz {
     // close previous connections if any
     Viz.sources.forEach((e) => { e.close() })
     Viz.sources = []
-    // delete old messages
-    document.querySelectorAll('.message').forEach(e => e.remove());
   }
 
   start() {
@@ -60,6 +59,9 @@ class Viz {
 
     this.slider = new Slider("progress-viz")
     this.slider.listen()
+
+    this.resizer = new Resizer("resizer")
+    this.resizer.listen()
 
     this.listen()
 
@@ -84,12 +86,12 @@ class Viz {
 
     messageListen()
     stopListen()
-    scrollListen()
+    // scrollListen()
     playListen()
     speedListen()
     sliderListen()
     liveListen()
-    startLive()
+    startLive(true)
 
     function messageListen() {
 
@@ -103,7 +105,6 @@ class Viz {
       nbMsg = 0
       self.data = []
 
-      let idx = 0
       self.nodes.nodes.forEach((node) => {
 
         const sendSrc = new EventSource(node.proxy + "/sent")
@@ -121,29 +122,20 @@ class Viz {
               id: dSent.id,
               color: node.color
             }
-            // const msgDiv = orderMsg(msg)
-
-            if (liveOn === true)
-              self.graph.showSend(msg, idx, SENT)
-
             const insertIdx = getSortedIdx(msg.timeSent, self.data, (d: datai) => d.timeSent)
 
-            const chartMsg = self.chart.addSentMsg(msg, insertIdx)
-            self.data.splice(insertIdx, 0, msg)
+            if (liveOn === true)
+              self.graph.showMsgTransition(msg, insertIdx, SENT)
 
-            idx++
+            const circle = self.chart.addMsg(msg, insertIdx, SENT)
+
+            self.data.splice(insertIdx, 0, msg)
+            if (replayFromIdx >= insertIdx)
+              replayFromIdx++
+
             nbMsg++
 
-            chartMsg.onclick = function (this: SVGElement) {
-              self.chart.addPopup(this, msg, SENT)
-              clearTimeout(Viz.timeoutID)
-              pauseLive()
-              // outlineMsg(this.id)
-              self.slider.bar.style.width = parseInt(this.id) / nbMsg * 100 + "%"
-
-              replayFromIdx = parseInt(this.id)
-              document.getElementById("play-icon").innerText = "play_arrow"
-            }
+            circleListen(circle, msg, SENT)
 
             if (autoScroll === true)
               messages.scrollTop = messages.scrollHeight
@@ -160,42 +152,33 @@ class Viz {
               const msg = self.data[i]
               if (msg.id === dRecv.id && msg.fromNode === fromNode) {
                 msg.timeRecv = parseInt(dRecv.timeRecv)
-                self.chart.addRecvMsg(msg, i)
+                const circle = self.chart.addMsg(msg, i, RECV)
+                circleListen(circle, msg, RECV)
                 if (liveOn === true)
-                  self.graph.showSend(msg, i, RECV)
+                  self.graph.showMsgTransition(msg, i, RECV)
                 break
               }
             }
           }
         }
       })
-    }
-    function orderMsg(msg: datai) {
-      const msgDiv = buildMsgDiv(msg)
-      if (self.data.length === 0) {
-        self.data.push(msg)
-        msgDiv.id = "0"
-        messages.appendChild(msgDiv)
-      }
-      else {
-        let insertIdx = self.data.length
+      function circleListen(circle: SVGElement, msg: datai, status: number) {
+        circle.onclick = function (this: SVGElement) {
+          const selected = self.chart.changeCircleState(circle, msg)
+          if (!selected) {
+            const goToGraphBtn = self.chart.addPopup(circle, msg, status)
+            goToGraphBtn.onclick = function (this: HTMLElement) {
+              clearTimeout(Viz.timeoutID)
+              pauseLive()
+              // outlineMsg(this.id)
+              self.slider.bar.style.width = parseInt(circle.parentElement.id) / nbMsg * 100 + "%"
 
-        while (msg.timeSent < self.data[insertIdx - 1].timeSent)
-          insertIdx--
-
-        for (let i = insertIdx; i < self.data.length; i++) {
-          const el = document.getElementById(i.toString())
-          el.id = (parseInt(el.id) + 1).toString()
+              replayFromIdx = parseInt(circle.parentElement.id)
+              document.getElementById("play-icon").innerText = "play_arrow"
+            }
+          }
         }
-        msgDiv.id = insertIdx.toString()
-        document.getElementById((insertIdx - 1).toString()).after(msgDiv)
-        self.data.splice(insertIdx, 0, msg)
-
-        if (replayFromIdx >= insertIdx)
-          replayFromIdx++
       }
-      //TO DO: reorder node messages sent and not received
-      return msgDiv
     }
 
     function playListen() {
@@ -233,12 +216,12 @@ class Viz {
           let msg = self.data[replayIdx]
           const per = (replayIdx + 1) / nbMsg * 100
 
-          self.graph.showSend(msg, replayIdx, REPLAY)
+          self.graph.showMsgTransition(msg, replayIdx, REPLAY)
           self.slider.bar.style.width = per + "%"
           // outlineMsg(replayIdx.toString())
 
-          if (autoScroll === false)
-            setScrollPer(messages, per)
+          // if (autoScroll === false)
+          //   setScrollPer(messages, per)
 
           replayFromIdx = replayIdx
           replayIdx++
@@ -254,34 +237,6 @@ class Viz {
       }
     }
 
-    function buildMsgDiv(msg: datai): HTMLElement {
-      document.querySelectorAll(".new").forEach((e: HTMLElement) => e.classList.remove("new"))
-
-      const div = document.createElement('div')
-      div.className = "message new"
-
-      const divIdToId = document.createElement('div')
-      divIdToId.className = "idToId"
-      const divFromId = document.createElement('div')
-      divFromId.appendChild(document.createTextNode(msg.fromNode))
-      const divToId = document.createElement('div')
-      divToId.appendChild(document.createTextNode(msg.toNode))
-      const divArrow = document.createElement('div')
-      divArrow.appendChild(document.createTextNode(' ⟶ '))
-
-      const divTime = document.createElement('div')
-      divTime.appendChild(document.createTextNode(msg.timeSent.toString()))
-      divTime.className = "time"
-
-      divIdToId.appendChild(divFromId)
-      divIdToId.appendChild(divArrow)
-      divIdToId.appendChild(divToId)
-      div.appendChild(divIdToId)
-      div.appendChild(divTime)
-
-      return div
-    }
-
     function liveListen() {
       document.getElementById("live-button").onclick = function (this: any) {
         startLive()
@@ -295,7 +250,6 @@ class Viz {
         console.log(self.chart.times)
         console.log(self.data)
         if (txt.innerText === "Restart") {
-          document.querySelectorAll('.message').forEach(e => e.remove());
           startLive(true)
           messageListen()
         }
@@ -320,7 +274,7 @@ class Viz {
 
         self.graph.clearMsgNodes()
         clearTimeout(Viz.timeoutID)
-        removeScrollBtn()
+        // removeScrollBtn()
         liveOn = true
         liveIconStyle.color = "red"
         liveIconStyle.opacity = "1"
@@ -368,89 +322,104 @@ class Viz {
     }
 
     function sliderListen() {
-      self.slider.slider.addEventListener('mousedown', function (e: any) {
+      self.slider.slider.addEventListener('mousedown', function () {
         pauseLive()
         document.getElementById("play-icon").innerText = "play_arrow"
         clearTimeout(Viz.timeoutID)
+        self.chart.lineCursor("add")
         update()
       })
       document.addEventListener('mousemove', function (e) {
-        if (self.slider.mDown === true) {
+        if (self.slider.mDown) {
           update()
+        }
+      })
+      document.addEventListener('mouseup', function (e) {
+        if (e.button == 0 && self.slider.mDown) {
+          self.chart.outlineMsg(false)
+          self.chart.tickValue = undefined
+          self.chart.updateTimeScale()
+          self.chart.lineCursor("remove")
+          self.slider.mDown = false
         }
       })
 
       function update() {
-        const per = self.slider.per
-        let closestMsgId = Math.round(per * nbMsg / 100)
+        const per = self.slider.per / 100
+        let closestMsgId = Math.round(per * nbMsg)
 
         if (closestMsgId >= nbMsg)
           closestMsgId = nbMsg - 1
-
         replayFromIdx = closestMsgId
-        // self.slider.bar.style.width = closestMsgId / nbMsg * 100 + "%"
-        setScrollPer(messages, (closestMsgId + 1) / nbMsg * 100)
+
         autoScroll = false
 
-        const t0 = self.data[0].timeSent
-        const t1 = self.data[self.data.length - 1].timeSent
+
+        const t0 = self.chart.times[0]
+        const t1 = self.chart.times[self.chart.times.length - 1]
         const elapsedTime = t1 - t0
+        const t = Math.round(per * elapsedTime + t0)
+        self.chart.tickValue = new Date(t)
+        self.chart.updateTimeScale()
+        self.chart.lineCursor("update")
+        self.chart.setScroll()
+
         self.data.forEach((msg, idx) => {
-          const t = per * elapsedTime / 100 + t0
           const timeSent = msg.timeSent
           const timeRecv = msg.timeRecv
-          if (t >= timeSent && t < timeRecv) {
+
+          if ((timeSent < timeRecv && t >= timeSent && t <= timeRecv) ||
+            (timeSent > timeRecv && t <= timeSent && t >= timeRecv)) {
             self.graph.showMsg(msg, idx, (t - timeSent) / (timeRecv - timeSent))
-            // document.getElementById(idx.toString()).classList.add("outlined")
+            self.chart.outlineMsg(true, idx)
           }
+          else if (t === timeRecv && t === timeSent) {
+            self.graph.showMsg(msg, idx, 0.5)
+            self.chart.outlineMsg(true, idx)
+          }
+
           else {
             self.graph.clearMsgNodes([idx])
-            // document.getElementById(idx.toString()).classList.remove("outlined")
+            self.chart.outlineMsg(false, idx)
           }
 
         })
       }
     }
 
-    function outlineMsg(idx: string) {
-      document.querySelectorAll(".outlined").forEach((e: HTMLElement) => e.classList.remove("outlined"))
-      document.getElementById(idx).classList.add("outlined")
-    }
+    // function outlineMsg(idx: string) {
+    //   document.querySelectorAll(".outlined").forEach((e: HTMLElement) => e.classList.remove("outlined"))
+    //   document.getElementById(idx).classList.add("outlined")
+    // }
 
-    function scrollListen() {
-      const scrollButton = document.getElementById("scroll-button")
-      scrollButton.style.top = messages.clientHeight - 50 + "px"
+    // function scrollListen() {
+    //   const scrollButton = document.getElementById("scroll-button")
+    //   scrollButton.style.top = messages.clientHeight - 50 + "px"
 
-      messages.addEventListener("wheel", function () {
-        autoScroll = false
-        scrollButton.style.opacity = "1"
-        scrollButton.style.visibility = "visible"
-      })
+    //   messages.addEventListener("wheel", function () {
+    //     autoScroll = false
+    //     scrollButton.style.opacity = "1"
+    //     scrollButton.style.visibility = "visible"
+    //   })
 
-      window.addEventListener("resize", function () {
-        scrollButton.style.top = messages.clientHeight - 50 + "px"
-      })
+    //   window.addEventListener("resize", function () {
+    //     scrollButton.style.top = messages.clientHeight - 50 + "px"
+    //   })
 
-      scrollButton.addEventListener("click", function () {
-        messages.scrollTop = messages.scrollHeight
-        autoScroll = true
-        removeScrollBtn()
-      })
-    }
+    //   scrollButton.addEventListener("click", function () {
+    //     messages.scrollTop = messages.scrollHeight
+    //     autoScroll = true
+    //     removeScrollBtn()
+    //   })
+    // }
 
-    function removeScrollBtn() {
-      const scrollButton = document.getElementById("scroll-button")
-      scrollButton.style.opacity = "0"
-      scrollButton.style.visibility = "hidden"
-    }
+    // function removeScrollBtn() {
+    //   const scrollButton = document.getElementById("scroll-button")
+    //   scrollButton.style.opacity = "0"
+    //   scrollButton.style.visibility = "hidden"
+    // }
   }
 }
-
-function setScrollPer(e: HTMLElement, per: number) {
-  const msgHeight = document.getElementById("scroll-button").clientHeight
-  e.scrollTop = per * (e.scrollHeight - msgHeight) / 100 - e.clientHeight / 2
-}
-
 
 /**
  * closePanel hides or shows the settings panel and update the button

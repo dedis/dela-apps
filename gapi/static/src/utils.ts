@@ -1,4 +1,6 @@
-export { getSortedIdx }
+import { scaleSequential, interpolateRainbow } from "d3"
+export { getSortedIdx, getPalette }
+
 /**
  * Returns the index of x when sorted in arr 
  */
@@ -10,4 +12,10 @@ function getSortedIdx(x: number, arr: Array<any>, f = (d: any) => d): number {
       break
     }
   return sortedIdx
+}
+/**
+ * Returns a palette of n colors evenly distributed 
+ */
+function getPalette(n: number) {
+  return scaleSequential(interpolateRainbow).domain([0, n])
 }

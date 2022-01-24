@@ -55,51 +55,61 @@
   </div>
 
   <div id="viz">
-    <div id="svg-graph-container">
-      <button type="button" id="reset-button">Zoom Reset</button>
-      <svg id="svg-graph"></svg>
-      <div id="record-controls">
-        <button type="button" id="play-icon" class="material-icons">pause</button>
-        <div id="progress-viz">
-          <div class="progress-bar">
-            <div class="progress-thumb"></div>
+    <div id="graph-chart">
+      <div id="graph-container">
+        <button type="button" id="reset-button">Zoom Reset</button>
+        <svg id="svg-graph"></svg>
+      </div>
+
+      <div id="resizer">|||</div>
+
+      <div id="chart-container">
+        <div id="svg-chart-container">
+          <!-- <button type="button" id="scroll-button">⬇</button> -->
+          <div id="labels-container">
+            <div id="padding"></div>
+            <svg id="svg-labels"></svg>
+          </div>
+          <div class="container">
+            <svg id="svg-scale"></svg>
+            <svg id="svg-chart"></svg>
           </div>
         </div>
-        <div id="live-icon" class="material-icons">radio_button_checked</div>
-        <button type="button" id="live-button">LIVE</button>
-
-        <div id="speed-dropup" class="dropup">
-          <button type="button" class="material-icons">av_timer</button>
-          <div id="speed-dropup-content" class="dropup-content">
-            <button class="speed-button" href="#">0.5</button>
-            <button class="speed-button" href="#" style="font-weight: bold;">1x</button>
-            <button class="speed-button" href="#">2</button>
-          </div>
-        </div>
-
-        <div id="replay-type-dropup" class="dropup">
-          <button type="button" class="material-icons">video_settings</button>
-          <div id="replay-type-dropup-content" class="dropup-content">
-            <button class="replay-type-button" href="#" style="font-weight: bold;">Sequential</button>
-            <button class="replay-type-button" href="#">Real time</button>
-          </div>
+        <div id="stop">
+          <div id="stop-icon" class="material-icons">stop_circle</div>
+          <button type="button" id="stop-button">Stop</button>
         </div>
       </div>
     </div>
 
-    <div id="chart-container">
-      <button type="button" id="scroll-button">⬇</button>
-      <svg id="svg-labels"></svg>
-      <div id="svg-chart-container">
-        <svg id="svg-chart"></svg>
+    <div id="record-controls">
+      <button type="button" id="play-icon" class="material-icons">pause</button>
+      <div id="progress-viz">
+        <div class="progress-bar">
+          <div class="progress-thumb"></div>
+        </div>
       </div>
-      <div id="stop">
-        <div id="stop-icon" class="material-icons">stop_circle</div>
-        <button type="button" id="stop-button">Stop</button>
+      <div id="live-icon" class="material-icons">radio_button_checked</div>
+      <button type="button" id="live-button">LIVE</button>
+
+      <div id="speed-dropup" class="dropup">
+        <button type="button" class="material-icons">av_timer</button>
+        <div id="speed-dropup-content" class="dropup-content">
+          <button class="speed-button" href="#">0.5</button>
+          <button class="speed-button" href="#" style="font-weight: bold;">1x</button>
+          <button class="speed-button" href="#">2</button>
+        </div>
+      </div>
+
+      <div id="replay-type-dropup" class="dropup">
+        <button type="button" class="material-icons">video_settings</button>
+        <div id="replay-type-dropup-content" class="dropup-content">
+          <button class="replay-type-button" href="#" style="font-weight: bold;">Sequential</button>
+          <button class="replay-type-button" href="#">Real time</button>
+        </div>
       </div>
     </div>
   </div>
-
 
   <script>
     jsapp.sayHi();
