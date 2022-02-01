@@ -27,12 +27,29 @@
             {"nodes": [
         {"id": "AB", "addr": "127.0.0.1:0001", "proxy": "http://127.0.0.1:8081/1"},
         {"id": "AC", "addr": "127.0.0.1:0002", "proxy": "http://127.0.0.1:8081/2"},
-        {"id": "AD", "addr": "127.0.0.1:0003", "proxy": "http://127.0.0.1:8081/3"}
+        {"id": "AD", "addr": "127.0.0.1:0003", "proxy": "http://127.0.0.1:8081/3"},
+        {"id": "AE", "addr": "127.0.0.1:0004", "proxy": "http://127.0.0.1:8081/4"},
+        {"id": "AF", "addr": "127.0.0.1:0005", "proxy": "http://127.0.0.1:8081/5"},
+        {"id": "AG", "addr": "127.0.0.1:0006", "proxy": "http://127.0.0.1:8081/6"},
+        {"id": "AH", "addr": "127.0.0.1:0007", "proxy": "http://127.0.0.1:8081/7"},
+        {"id": "AI", "addr": "127.0.0.1:0008", "proxy": "http://127.0.0.1:8081/8"},
+        {"id": "AJ", "addr": "127.0.0.1:0009", "proxy": "http://127.0.0.1:8081/9"},
+        {"id": "AK", "addr": "127.0.0.1:0010", "proxy": "http://127.0.0.1:8081/10"},
+        {"id": "AL", "addr": "127.0.0.1:0011", "proxy": "http://127.0.0.1:8081/11"},
+        {"id": "AM", "addr": "127.0.0.1:0012", "proxy": "http://127.0.0.1:8081/12"},
+        {"id": "AN", "addr": "127.0.0.1:0013", "proxy": "http://127.0.0.1:8081/13"},
+        {"id": "AO", "addr": "127.0.0.1:0014", "proxy": "http://127.0.0.1:8081/14"},
+        {"id": "AP", "addr": "127.0.0.1:0015", "proxy": "http://127.0.0.1:8081/15"},
+        {"id": "AQ", "addr": "127.0.0.1:0016", "proxy": "http://127.0.0.1:8081/16"},
+        {"id": "AR", "addr": "127.0.0.1:0017", "proxy": "http://127.0.0.1:8081/17"},
+        {"id": "AS", "addr": "127.0.0.1:0018", "proxy": "http://127.0.0.1:8081/18"},
+        {"id": "AT", "addr": "127.0.0.1:0019", "proxy": "http://127.0.0.1:8081/19"},
+        {"id": "AU", "addr": "127.0.0.1:0020", "proxy": "http://127.0.0.1:8081/20"}
 ]}
           </textarea>
           <button type="button" id="submit-button">Load</button>
         </div>
-        <div class="parameters">
+        <!-- <div class="parameters">
           <div class="parameter">
             <input type="number" value="-1000" id="charge-value">
             <label for="charge-value">Charge value</label>
@@ -48,24 +65,70 @@
             <label for="node-radius">Node radius</label>
             <button type="button" id="radius-update">Apply</button>
           </div>
-        </div>
+        </div> -->
       </div>
       <button type="button" id="close-button" class="material-icons">close</button>
     </div>
   </div>
 
   <div id="viz">
-    <div id="graph-chart">
-      <div id="graph-container">
-        <button type="button" id="reset-button">Zoom Reset</button>
-        <svg id="svg-graph"></svg>
+    <div class="flex-container-row">
+      <div id="graph-container" class="svg-flex-container">
+        <div class="settings-container">
+          <div id="link-button" class="dropup" title="Link size">
+            <button class="viz-button material-icons" type="button">polyline</button>
+            <div class="dropup-content">
+              <div id="link-slider-value" class="slider-value">20</div>
+              <input type="range" min="0" max="100" value="10" class="slider" id="link-slider">
+            </div>
+          </div>
+          <div id="radius-button" class="dropup" title="Node radius">
+            <button class="viz-button" type="button">
+              <span class="material-icons" style="font-size: 13px;">hdr_auto</span>
+              <span class="material-icons">hdr_auto</span>
+            </button>
+            <div class="dropup-content">
+              <div id="radius-slider-value" class="slider-value">20</div>
+              <input type="range" min="0" max="100" value="20" class="slider" id="radius-slider">
+            </div>
+          </div>
+          <button id="reset-button" title="Reset position" class="material-icons viz-button">gps_fixed</button>
+        </div>
+        <div id="svg-graph-container">
+          <div id="node-actions">
+            <div id="node-id">Node ID</div>
+            <button id="stop-node-button" class="viz-button action">STOP</button>
+            <button id="action2-node-button" class="viz-button action">ACTION2</button>
+            <button id="action3-node-button" class="viz-button action">ACTION3</button>
+          </div>
+          <svg id="svg-graph"></svg>
+        </div>
       </div>
 
-      <div id="resizer">|||</div>
+      <div id="resizer">||</div>
 
-      <div id="chart-container">
+      <div id="chart-container" class="svg-flex-container">
+        <div class="settings-container">
+          <div id="height-button" class="dropup" title="Vertical zoom">
+            <button type="button" class="material-icons viz-button">height</button>
+            <div class="dropup-content">
+              <div id="height-slider-value" class="slider-value">20</div>
+              <input type="range" min="1" max="100" value="20" class="slider" id="height-slider">
+            </div>
+          </div>
+          <div id="width-button" class="dropup" title="Horizontal zoom">
+            <button type="button" class="material-icons viz-button">height</button>
+            <div class="dropup-content">
+              <div id="width-slider-value" class="slider-value">20</div>
+              <input type="range" min="1" max="100" value="20" class="slider" id="width-slider">
+            </div>
+          </div>
+          <button type="button" title="Scroll down" id="scroll-button"
+            class="material-icons viz-button">vertical_align_bottom</button>
+          <button type="button" title="Optimal performance" id="performance-button"
+            class="material-icons viz-button">flash_off</button>
+        </div>
         <div id="svg-chart-container">
-          <!-- <button type="button" id="scroll-button">⬇</button> -->
           <div id="labels-container">
             <div id="padding"></div>
             <svg id="svg-labels"></svg>
@@ -75,40 +138,39 @@
             <svg id="svg-chart"></svg>
           </div>
         </div>
-        <div id="stop">
-          <div id="stop-icon" class="material-icons">stop_circle</div>
-          <button type="button" id="stop-button">Stop</button>
-        </div>
       </div>
     </div>
 
-    <div id="record-controls">
-      <button type="button" id="play-icon" class="material-icons">pause</button>
+    <div id="record-controls" oncontextmenu="return false;">
+      <button type="button" title="Stop receiving messages" id="stop-button"
+        class="material-icons viz-button">cancel</button>
+      <button type="button" id="play-button" class="material-icons viz-button">pause</button>
       <div id="progress-viz">
         <div class="progress-bar">
           <div class="progress-thumb"></div>
         </div>
       </div>
       <div id="live-icon" class="material-icons">radio_button_checked</div>
-      <button type="button" id="live-button">LIVE</button>
+      <button type="button" id="live-button" class="viz-button">LIVE</button>
 
-      <div id="speed-dropup" class="dropup">
-        <button type="button" class="material-icons">av_timer</button>
-        <div id="speed-dropup-content" class="dropup-content">
-          <button class="speed-button" href="#">0.5</button>
-          <button class="speed-button" href="#" style="font-weight: bold;">1x</button>
-          <button class="speed-button" href="#">2</button>
+      <div id="speed-button" class="dropup" title="Vertical zoom">
+        <button type="button" class="material-icons viz-button">schedule</button>
+        <div class="dropup-content">
+          <div id="speed-slider-value" class="slider-value">1x</div>
+          <input type="range" min="0" max="100" value="60" class="slider" id="speed-slider">
         </div>
       </div>
 
-      <div id="replay-type-dropup" class="dropup">
-        <button type="button" class="material-icons">video_settings</button>
+      <div class="dropup">
+        <button type="button" id="replay-type-button" class="material-icons viz-button">video_settings</button>
         <div id="replay-type-dropup-content" class="dropup-content">
-          <button class="replay-type-button" href="#" style="font-weight: bold;">Sequential</button>
-          <button class="replay-type-button" href="#">Real time</button>
+          <button class="dropup-button replay-type-dropup-button" href="#"
+            style="font-weight: bold;">Sequential</button>
+          <button class="dropup-button replay-type-dropup-button" href="#">Real time</button>
         </div>
       </div>
     </div>
+    <div id="sliderTimer"></div>
   </div>
 
   <script>

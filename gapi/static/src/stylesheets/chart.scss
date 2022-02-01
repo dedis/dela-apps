@@ -1,23 +1,65 @@
 
-#graph-chart #chart-container {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  // margin: 50px 20px 50px 0;
-  border: 1px solid rgb(236, 236, 236);
+.svg-flex-container {
+
+  .settings-container {
+    #height-button {
+      margin: 0 10px 0 0;
+    }
+    #width-button {
+      margin: 0 10px 0 0;
+      button {
+        transform: rotateZ(90deg);
+      }
+    }
+    #scroll-button {
+      margin: 0 10px 0 0;
+      cursor: pointer;
+    }
+    
+    #performance-button {
+      margin: 0 10px 0 0;
+      cursor: pointer;
+    }
+
+    #link-button {
+      margin: 0 10px 0 0;
+    }
+
+  }
 
   #svg-chart-container {
     flex: 1 1 0; // warning: compatibility issues if using flex 1 := flex 1 1 0%
     overflow: scroll;
+    margin-top: 10px;
 
     #labels-container {
       display: flex;
       width: fit-content;
       position: sticky;
       top: 0;
-      background-color: white;
       z-index: 2;
+
+      .popup-label {
+        position: absolute;
+        background-color: white;
+        border-radius: 3px;
+        color: white;
+        transition: none;
+        button {
+          display: block;
+          width: 100%;
+          padding: 3px 5px;
+        }
+        .hide-button {
+          border-bottom: 1px solid white;
+          border-radius: 3px 3px 0 0;
+          cursor: pointer;
+        }
+        .focus-button {
+          border-radius: 0 0 3px 3px;
+          cursor: pointer;
+        }
+      }
 
       #padding {
         flex: none;
@@ -66,12 +108,12 @@
       .chart-message {
         circle {
           cursor: pointer;
-          transition: transform 0.5s;
+          transition: transform 0.1s;
           transform-origin: center center;
           transform-box: fill-box;
           stroke-width: 10px;
           &:hover {
-            transform: scale(1.5);
+            transform: scale(1.2);
           }
         }
         .selected {
@@ -79,14 +121,14 @@
         }
 
         line {
-          transition: stroke-width 0.5s, stroke 0.5s;
+          transition: stroke-width 0.1s, stroke 0.1s;
           stroke-width: 1px;
           stroke: rgb(199, 198, 198);
         }
       }
       .outlined {
         circle {
-          transform: scale(1.3);
+          transform: scale(1.1);
         }
         
         line {
@@ -100,6 +142,7 @@
       }
 
       #line-cursor {
+        pointer-events: none;
         line {
           stroke: rgb(182, 182, 182);
           stroke-width: 1px;

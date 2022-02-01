@@ -6,6 +6,7 @@ import { NodesEntity } from './nodes'
 import { datai } from './message'
 import { SENT, RECV, REPLAY } from './message'
 import { getPalette } from './utils'
+import { Slider } from './slider'
 
 /**
  * Graph implements the primitives to create and update the graph.
@@ -55,6 +56,7 @@ class Graph {
 
     // reinitialize previous svg zooms
     this.svg.call(d3.zoom().on("zoom", zoom).transform, d3.zoomIdentity)
+    d3.select("#reset-button").text("gps_fixed")
 
     this.svg.selectAll('*').remove()
 
@@ -69,11 +71,12 @@ class Graph {
       .append("g")
       .attr("class", "graph")
 
-    this.svg.call(d3.zoom().on("zoom", zoom))
+    this.svg.call(d3.zoom().on("zoom", zoom)).on("dblclick.zoom", null)
 
     d3.select("#reset-button")
       .on("click", function () {
         self.svg.call(d3.zoom().on("zoom", zoom).transform, d3.zoomIdentity)
+        d3.select("#reset-button").text("gps_fixed")
       })
 
 
@@ -95,6 +98,7 @@ class Graph {
         .on("start", dragstarted)
         .on("drag", dragged)
         .on("end", dragended))
+      .on("click", updateNodeActions)
 
     gNode.append('circle')
       .attr('r', this.node_rad)
@@ -113,7 +117,7 @@ class Graph {
       .on('tick', ticked)
 
     function ticked() {
-      // self.updateTransition()
+
       self.link
         .attr('x1', (d: any) => d.source.x)
         .attr('y1', (d: any) => d.source.y)
@@ -127,13 +131,15 @@ class Graph {
 
     function zoom() {
       d3.select(this).select(".graph").attr("transform", d3.event.transform)
+      d3.select("#reset-button").text("gps_not_fixed")
     }
 
     function dragstarted(d: d3.SimulationNodeDatum) {
       if (!d3.event.active) self.simulation.alphaTarget(0.3).restart()
       d.fx = d.x
       d.fy = d.y
-      d3.select(this).raise().select("circle")
+      d3.select(this)
+        .select("circle")
         .attr("stroke", "black")
         .attr("stroke-width", 3)
     }
@@ -147,28 +153,35 @@ class Graph {
       if (!d3.event.active) self.simulation.alphaTarget(0)
       d.fx = null;
       d.fy = null;
-      d3.select(this).select("circle")
+      d3.select(this)
+        .select("circle")
         .attr("stroke", "none")
+    }
+
+    function updateNodeActions(d: NodesEntity) {
+      const actions = d3.select("#node-actions")
+      actions
+        .attr("class", d.id)
+        .selectAll(".action")
+        .style("background", d.color)
+      actions.select("#node-id")
+        .style("background", d.color)
+        .text(d.id)
     }
   }
 
   listen() {
     const self = this
+    document.getElementById('radius-slider').oninput = function (this: HTMLInputElement) {
+      document.getElementById("radius-slider-value").innerText = this.value
+      self.updateNodeRadius(parseFloat(this.value))
+    }
 
-    document.getElementById('charge-update').addEventListener('click', function () {
-      const val = document.getElementById('charge-value') as HTMLFormElement
-      self.updateCharge(val.value)
-    })
-
-    document.getElementById('link-update').addEventListener('click', function () {
-      const val = document.getElementById('link-value') as HTMLFormElement
-      self.updateLinkVal(val.value)
-    })
-
-    document.getElementById('radius-update').addEventListener('click', function () {
-      const val = document.getElementById('node-radius') as HTMLFormElement
-      self.updateNodeRadius(val.value)
-    })
+    document.getElementById('link-slider').oninput = function (this: HTMLInputElement) {
+      const value = 1000 * parseFloat(this.value) / parseFloat(this.max)
+      document.getElementById("link-slider-value").innerText = this.value
+      self.updateLinkVal(value)
+    }
 
     window.addEventListener("resize", function () { self.reportWindowSize() })
   }
@@ -277,8 +290,6 @@ class Graph {
         .attr('cx', nodeAx)
         .attr('cy', nodeAy)
         .style('fill', msg.color)
-        .style('stroke-width', 1) // set the stroke width
-        .style('stroke', '#aaa')
         .attr('r', this.node_rad / 2)
         .transition()
         .ease(d3.easeLinear)
@@ -306,8 +317,6 @@ class Graph {
         .attr('cx', nodeAx)
         .attr('cy', nodeAy)
         .style('fill', msg.color)
-        .style('stroke-width', 1) // set the stroke width
-        .style('stroke', '#aaa')
         .attr('r', this.node_rad / 2)
         .transition()
         .ease(d3.easeLinear)
@@ -330,40 +339,6 @@ class Graph {
     }
   }
 
-  // updateTransition() {
-
-  //   const self = this
-  //   this.svg
-  //     .selectAll(".message-node")
-  //     .each(function (this: SVGElement) {
-  //       const msg = d3.select(this)
-  //       const id = parseInt(this.id.slice(1))
-  //       const status = msg.classed("sent") ? SENT : msg.classed("recv") ? RECV : REPLAY
-
-  //       const nodeA: any = d3.select(`#${self..fromNode}`).node()
-  //       const nodeAMatrix = nodeA.transform.baseVal[0].matrix
-  //       const nodeAx = nodeAMatrix.e
-  //       const nodeAy = nodeAMatrix.f
-
-  //       const nodeB: any = d3.select(`#${msg.toNode}`).node()
-  //       const nodeBMatrix = nodeB.transform.baseVal[0].matrix
-  //       const nodeBx = nodeBMatrix.e
-  //       const nodeBy = nodeBMatrix.f
-
-  //       const halfDistx = (nodeBx + nodeAx) / 2
-  //       const halfDisty = (nodeBy + nodeAy) / 2
-
-  //       switch (status) {
-  //         case SENT:
-  //           break
-  //         case RECV:
-  //           break
-  //         case REPLAY:
-  //           break
-  //       }
-
-  //     })
-  // }
 
   clearMsgNodes(list: Array<number> = undefined) {
     if (list === undefined)
@@ -399,8 +374,6 @@ class Graph {
         .attr('cx', posx)
         .attr('cy', posy)
         .style('fill', msg.color)
-        .style('stroke-width', 1) // set the stroke width
-        .style('stroke', '#aaa')
         .attr('r', this.node_rad / 2)
     }
     else {

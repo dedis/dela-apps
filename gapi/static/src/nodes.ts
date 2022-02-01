@@ -3,6 +3,8 @@ export interface NodesEntity {
   color: string;
   addr: string;
   proxy: string;
+  display: string;
+  stop: boolean;
 }
 
 export interface nodes {

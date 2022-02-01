@@ -10,10 +10,12 @@ class Slider {
   beginClientX: number
   sliderLong: number
   per: number
+  timer: HTMLElement
 
   constructor(id: string) {
     this.slider = document.getElementById(id)
     this.bar = this.slider.querySelector('.progress-bar')
+    this.timer = document.getElementById("sliderTimer")
   }
 
   listen() {
@@ -26,8 +28,8 @@ class Slider {
         self.positionX = e.offsetX
         self.beginClientX = e.clientX
         self.sliderLong = self.slider.clientWidth
-        self.per = self.positionX / self.sliderLong * 100
-        self.bar.style.width = self.per + '%'
+        self.per = self.positionX / self.sliderLong
+        self.bar.style.width = self.per * 100 + '%'
       }
     })
     document.addEventListener('mousemove', function (e: MouseEvent) {
@@ -35,10 +37,14 @@ class Slider {
         var moveX = e.clientX - self.beginClientX
         self.positionX = (self.beginX + moveX > self.sliderLong) ?
           self.sliderLong : (self.beginX + moveX < 0) ? 0 : self.beginX + moveX
-        self.per = self.positionX / self.sliderLong * 100
-        self.bar.style.width = self.per + '%'
+        self.per = self.positionX / self.sliderLong
+        self.bar.style.width = self.per * 100 + '%'
         e.preventDefault()
       }
     })
+  }
+  setWidth(per: number) {
+    this.per = per
+    this.bar.style.width = per * 100 + '%'
   }
 }

@@ -1,33 +1,85 @@
 
-#graph-chart #graph-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  // margin: 20px 10%;
-  -webkit-user-select: none;
-  user-select: none;
-  border:1px solid rgb(236, 236, 236);
+.svg-flex-container {
+  
+  .settings-container {
+    button#reset-button {
+      margin: 0 10px 0 0;
+      cursor: pointer;
+    }
 
-  #reset-button{
-    border: none;
-    margin-left: auto;
-    background-color: transparent;
-    color: black;
-    padding: 10px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: 0.2s;
-    opacity: 0.8;
-    
-    &:hover {
-      opacity: 1;
+    #radius-button {
+      margin: 0 15px 0 0;
+      button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
     }
   }
-
-  #svg-graph {
+  #svg-graph-container{
+    display: flex;
     flex: 1;
-    width: 100%;
-    cursor: move;
+    position: relative;
 
+    #node-actions {
+      position: absolute;
+      color: white;
+      top: 10px;
+      left: 10px;
+
+      button.action {
+        display: block;
+        width: 100%;
+        padding: 2px;
+        background-color: black;
+        cursor: pointer;
+      }
+      #node-id {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 5px 5px 2px 5px;
+        border-bottom: 1px solid white;
+        border-radius: 3px 3px 0 0;
+        background-color: black;
+        text-align: center;
+      }
+      
+    }
+    #svg-graph {
+      flex: 1;
+      width: 100%;
+      cursor: move;
+
+      .nodes {
+        cursor:pointer;
+
+        text.label {
+          fill: white;
+          pointer-events: none;
+          text-anchor: middle;
+          dominant-baseline: middle;
+        }
+    
+        .actions {
+          font-size: 20px;
+          text-align: center;
+          visibility: hidden;
+        }
+      }
+
+      .links {
+        line {
+          stroke: #999;
+          stroke-opacity: 0.6;
+        }
+      }
+
+      .graph-message{
+        stroke-width: 1;
+        stroke: gainsboro;
+        cursor: pointer;
+      }
+    }
   }
 }

@@ -1,3 +1,4 @@
+import * as d3 from 'd3'
 import { nodes } from './nodes'
 import { Graph } from './graph'
 import { Slider } from './slider'
@@ -6,6 +7,7 @@ import { SENT, RECV, REPLAY } from './message'
 import { Chart } from './chart'
 import { Resizer } from './resizer'
 import { getSortedIdx } from './utils'
+import { select } from 'd3'
 
 export function sayHi() {
   document.getElementById('settings-button').addEventListener('click', function () {
@@ -27,7 +29,7 @@ class Viz {
 
   static sources: Array<EventSource> = []
 
-  static timeoutID: NodeJS.Timeout
+  static replay: d3.Transition<HTMLElement, unknown, null, undefined>
 
   nodes: nodes
 
@@ -40,6 +42,10 @@ class Viz {
   slider: Slider
 
   resizer: Resizer
+
+  time: number
+
+  speed: number
 
   constructor() {
     const inputData = document.getElementById('nodesData') as HTMLInputElement
@@ -56,6 +62,7 @@ class Viz {
     this.graph.listen()
 
     this.chart = new Chart(this.nodes.nodes)
+    this.chart.listen()
 
     this.slider = new Slider("progress-viz")
     this.slider.listen()
@@ -65,6 +72,8 @@ class Viz {
 
     this.listen()
 
+    this.speed = 1
+
     document.getElementById("viz").style.visibility = "visible"
   }
 
@@ -72,12 +81,7 @@ class Viz {
     const self = this
 
     let liveOn: boolean = false
-    let autoScroll: boolean
     let nbMsg: number
-    let replayFromIdx: number
-    let speed: number = 1
-
-    const messages = document.getElementById("svg-chart")
 
     const add2Id = new Map<string, string>()
     self.nodes.nodes.forEach((node) => {
@@ -92,20 +96,24 @@ class Viz {
     sliderListen()
     liveListen()
     startLive(true)
+    actionsListen()
 
     function messageListen() {
 
       self.graph.display()
       self.chart.display()
 
-      clearTimeout(Viz.timeoutID)
+      self.stopReplay()
 
-      document.getElementById("stop-icon").innerText = "stop_circle"
-      document.getElementById("stop-button").innerText = "Stop"
+      document.getElementById("stop-button").innerText = "cancel"
+      document.getElementById("stop-button").title = "Stop receiving messages"
+
       nbMsg = 0
       self.data = []
 
       self.nodes.nodes.forEach((node) => {
+        fetch(node.proxy + "/start")
+          .then(response => { if (!response.ok) console.error("Server error: start node fail") })
 
         const sendSrc = new EventSource(node.proxy + "/sent")
         Viz.sources.push(sendSrc)
@@ -130,15 +138,10 @@ class Viz {
             const circle = self.chart.addMsg(msg, insertIdx, SENT)
 
             self.data.splice(insertIdx, 0, msg)
-            if (replayFromIdx >= insertIdx)
-              replayFromIdx++
 
             nbMsg++
 
             circleListen(circle, msg, SENT)
-
-            if (autoScroll === true)
-              messages.scrollTop = messages.scrollHeight
           }
         }
 
@@ -150,7 +153,7 @@ class Viz {
           if (fromNode !== undefined) {
             for (let i = self.data.length - 1; i >= 0; i--) {
               const msg = self.data[i]
-              if (msg.id === dRecv.id && msg.fromNode === fromNode) {
+              if (msg.id === dRecv.id && msg.fromNode === fromNode && msg.timeRecv === undefined) {
                 msg.timeRecv = parseInt(dRecv.timeRecv)
                 const circle = self.chart.addMsg(msg, i, RECV)
                 circleListen(circle, msg, RECV)
@@ -162,78 +165,47 @@ class Viz {
           }
         }
       })
-      function circleListen(circle: SVGElement, msg: datai, status: number) {
-        circle.onclick = function (this: SVGElement) {
-          const selected = self.chart.changeCircleState(circle, msg)
-          if (!selected) {
-            const goToGraphBtn = self.chart.addPopup(circle, msg, status)
-            goToGraphBtn.onclick = function (this: HTMLElement) {
-              clearTimeout(Viz.timeoutID)
-              pauseLive()
-              // outlineMsg(this.id)
-              self.slider.bar.style.width = parseInt(circle.parentElement.id) / nbMsg * 100 + "%"
+    }
 
-              replayFromIdx = parseInt(circle.parentElement.id)
-              document.getElementById("play-icon").innerText = "play_arrow"
-            }
+    function circleListen(circle: SVGElement, msg: datai, status: number) {
+      circle.onclick = function (this: SVGElement) {
+        const selected = self.chart.toggleState(circle, msg, status)
+        if (!selected) {
+          const goToBtn = self.chart.addPopup(circle, msg, status)
+          goToBtn.onclick = function (this: HTMLElement) {
+            self.stopReplay()
+            self.time = status === SENT ? msg.timeSent : msg.timeRecv
+            self.slider.setWidth(
+              (self.time - self.chart.times[0]) /
+              (self.chart.times[self.chart.times.length - 1] - self.chart.times[0])
+            )
+            self.updateGraph(self.time)
+            pauseLive()
+            document.getElementById("play-button").innerText = "play_arrow"
           }
         }
       }
     }
 
     function playListen() {
-      document.getElementById("play-icon").onclick = function (this: any) {
+      document.getElementById("play-button").onclick = function (this: any) {
         if (this.innerText === "pause") {
-          clearTimeout(Viz.timeoutID)
+          self.stopReplay()
           this.innerText = "play_arrow"
 
           if (liveOn === true) {
-            replayFromIdx = nbMsg - 1
             pauseLive()
-            // outlineMsg(replayFromIdx.toString())
           }
         }
         else if (this.innerText === "play_arrow") {
           this.innerText = "pause"
-          replay()
+          self.replay()
         }
         else if (this.innerText === "replay") {
-          replayFromIdx = 0
-          self.slider.bar.style.width = "0%"
+          self.slider.setWidth(0)
           this.innerText = "pause"
-          replay()
+          self.replay()
         }
-      }
-    }
-
-    function replay() {
-
-      if (replayFromIdx !== undefined) {
-        self.graph.clearMsgNodes()
-        let replayIdx = replayFromIdx
-        autoScroll = false
-        setTimeout(function step() {
-          let msg = self.data[replayIdx]
-          const per = (replayIdx + 1) / nbMsg * 100
-
-          self.graph.showMsgTransition(msg, replayIdx, REPLAY)
-          self.slider.bar.style.width = per + "%"
-          // outlineMsg(replayIdx.toString())
-
-          // if (autoScroll === false)
-          //   setScrollPer(messages, per)
-
-          replayFromIdx = replayIdx
-          replayIdx++
-
-          if (replayIdx >= nbMsg) {
-            document.getElementById("play-icon").innerText = "replay"
-            return
-          }
-          const nextMsg = self.data[replayIdx]
-          const time = nextMsg.timeSent - msg.timeSent
-          Viz.timeoutID = setTimeout(step, time / speed)
-        }, 10)
       }
     }
 
@@ -245,19 +217,18 @@ class Viz {
 
     function stopListen() {
       document.getElementById("stop-button").onclick = function (this: any) {
-        const icon = document.getElementById("stop-icon")
-        const txt = document.getElementById("stop-button")
+        const button = document.getElementById("stop-button")
         console.log(self.chart.times)
         console.log(self.data)
-        if (txt.innerText === "Restart") {
+        if (button.innerText === "sync") {
           startLive(true)
           messageListen()
         }
-        else if (txt.innerText === "Stop") {
+        else if (button.innerText === "cancel") {
           Viz.sources.forEach((e) => { e.close() })
           Viz.sources = []
-          txt.innerText = "Restart";
-          icon.innerText = "restart_alt"
+          button.innerText = "sync";
+          button.title = "Start receiving messages"
           pauseLive(true)
         }
       }
@@ -273,16 +244,15 @@ class Viz {
         const liveIconStyle = document.getElementById("live-icon").style
 
         self.graph.clearMsgNodes()
-        clearTimeout(Viz.timeoutID)
-        // removeScrollBtn()
+        self.stopReplay()
         liveOn = true
         liveIconStyle.color = "red"
         liveIconStyle.opacity = "1"
         liveIconStyle.cursor = "default"
-        autoScroll = true
-        messages.scrollTop = messages.scrollHeight
-        self.slider.bar.style.width = "100%"
-        document.getElementById("play-icon").innerText = "pause";
+        self.chart.autoScroll(true)
+        self.chart.scrollDown()
+        self.slider.setWidth(1)
+        document.getElementById("play-button").innerText = "pause";
         liveButtonStyle.cursor = "default"
       }
     }
@@ -297,7 +267,7 @@ class Viz {
         const liveIconStyle = document.getElementById("live-icon").style
 
         liveOn = false
-        autoScroll = false
+        self.chart.autoScroll(false)
         liveIconStyle.color = "#4a4a4a"
         liveIconStyle.opacity = "0.9"
         if (stop !== true)
@@ -306,27 +276,25 @@ class Viz {
     }
 
     function speedListen() {
-      document.querySelectorAll(".speed-button").forEach((e: HTMLElement) => {
-        e.onclick = function () {
-          document.querySelectorAll(".speed-button").forEach((e: HTMLElement) => {
-            if (e.innerHTML.slice(-1) === "x") {
-              e.innerHTML = e.innerHTML.slice(0, -1)
-              e.style.fontWeight = "normal"
-            }
-          })
-          e.innerHTML = e.innerHTML + "x"
-          e.style.fontWeight = "bold"
-          speed = parseFloat(e.innerHTML)
-        }
-      })
+      document.getElementById('speed-slider').oninput = function (this: HTMLInputElement) {
+        let value = parseFloat(this.value)
+        const r = value % 10
+        const tens = Math.floor(value / 10)
+        const offset = 6
+        const decimals = Math.max(0, offset - tens)
+        value = (r === 0 ? 1 : r) * Math.pow(10, tens - offset)
+        document.getElementById("speed-slider-value").innerText = value.toFixed(decimals) + "x"
+        self.speed = value
+        self.updateReplay()
+      }
     }
 
     function sliderListen() {
       self.slider.slider.addEventListener('mousedown', function () {
+        self.chart.autoScroll(false)
         pauseLive()
-        document.getElementById("play-icon").innerText = "play_arrow"
-        clearTimeout(Viz.timeoutID)
-        self.chart.lineCursor("add")
+        document.getElementById("play-button").innerText = "play_arrow"
+        self.stopReplay()
         update()
       })
       document.addEventListener('mousemove', function (e) {
@@ -336,88 +304,124 @@ class Viz {
       })
       document.addEventListener('mouseup', function (e) {
         if (e.button == 0 && self.slider.mDown) {
-          self.chart.outlineMsg(false)
-          self.chart.tickValue = undefined
-          self.chart.updateTimeScale()
-          self.chart.lineCursor("remove")
+          // self.chart.outlineMsg(false)
+          self.chart.updateTimeScale("idle")
+          // self.chart.lineCursor("remove")
           self.slider.mDown = false
         }
       })
 
       function update() {
-        const per = self.slider.per / 100
-        let closestMsgId = Math.round(per * nbMsg)
+        self.time = self.slider.per
+          * (self.chart.times[self.chart.times.length - 1] - self.chart.times[0])
+          + self.chart.times[0]
 
-        if (closestMsgId >= nbMsg)
-          closestMsgId = nbMsg - 1
-        replayFromIdx = closestMsgId
-
-        autoScroll = false
-
-
-        const t0 = self.chart.times[0]
-        const t1 = self.chart.times[self.chart.times.length - 1]
-        const elapsedTime = t1 - t0
-        const t = Math.round(per * elapsedTime + t0)
-        self.chart.tickValue = new Date(t)
-        self.chart.updateTimeScale()
-        self.chart.lineCursor("update")
-        self.chart.setScroll()
-
-        self.data.forEach((msg, idx) => {
-          const timeSent = msg.timeSent
-          const timeRecv = msg.timeRecv
-
-          if ((timeSent < timeRecv && t >= timeSent && t <= timeRecv) ||
-            (timeSent > timeRecv && t <= timeSent && t >= timeRecv)) {
-            self.graph.showMsg(msg, idx, (t - timeSent) / (timeRecv - timeSent))
-            self.chart.outlineMsg(true, idx)
-          }
-          else if (t === timeRecv && t === timeSent) {
-            self.graph.showMsg(msg, idx, 0.5)
-            self.chart.outlineMsg(true, idx)
-          }
-
-          else {
-            self.graph.clearMsgNodes([idx])
-            self.chart.outlineMsg(false, idx)
-          }
-
-        })
+        self.updateGraph(self.time)
       }
     }
 
-    // function outlineMsg(idx: string) {
-    //   document.querySelectorAll(".outlined").forEach((e: HTMLElement) => e.classList.remove("outlined"))
-    //   document.getElementById(idx).classList.add("outlined")
-    // }
+    self.chart.container.addEventListener("wheel", () => {
+      this.stopReplay()
+      self.chart.autoScroll(false)
+    })
 
-    // function scrollListen() {
-    //   const scrollButton = document.getElementById("scroll-button")
-    //   scrollButton.style.top = messages.clientHeight - 50 + "px"
+    function actionsListen() {
 
-    //   messages.addEventListener("wheel", function () {
-    //     autoScroll = false
-    //     scrollButton.style.opacity = "1"
-    //     scrollButton.style.visibility = "visible"
-    //   })
+      document.getElementById("stop-node-button").onclick = function (this: HTMLButtonElement) {
+        const nodeId = document.getElementById("node-id").innerText
+        const node = self.nodes.nodes.find(d => d.id === nodeId)
 
-    //   window.addEventListener("resize", function () {
-    //     scrollButton.style.top = messages.clientHeight - 50 + "px"
-    //   })
+        if (node !== undefined) {
+          switch (this.innerText) {
+            case "STOP":
+              fetch(node.proxy + "/stop")
+                .then(response => { if (!response.ok) console.error("Server error: stop node fail") })
+              this.innerText = "START"
+              self.chart.stop(node)
+              break
+            case "START":
+              fetch(node.proxy + "/start")
+                .then(response => { if (!response.ok) console.error("Server error: start node fail") })
+              this.innerText = "STOP"
+              break
+          }
+        }
+      }
+      document.getElementById("action2-node-button").onclick = function (this: HTMLButtonElement) {
+        self.data.forEach((msg, i) => {
+          if (msg.timeRecv === undefined) {
+            msg.timeRecv = msg.timeSent + 3000 * Math.random()
+            const circle = self.chart.addMsg(msg, i, RECV)
+            // circleListen(circle, msg, RECV)
+          }
+        })
+      }
 
-    //   scrollButton.addEventListener("click", function () {
-    //     messages.scrollTop = messages.scrollHeight
-    //     autoScroll = true
-    //     removeScrollBtn()
-    //   })
-    // }
+    }
+  }
 
-    // function removeScrollBtn() {
-    //   const scrollButton = document.getElementById("scroll-button")
-    //   scrollButton.style.opacity = "0"
-    //   scrollButton.style.visibility = "hidden"
-    // }
+  updateGraph(t: number) {
+    const timeDate = new Date(this.time)
+    this.slider.timer.innerText = this.chart.parseTime(timeDate)
+    this.chart.updateTimeScale("sliderMove", timeDate)
+    this.chart.lineCursor("updateY", timeDate)
+    this.chart.setScroll(timeDate)
+
+    this.data.forEach((msg, idx) => {
+      const timeSent = msg.timeSent
+      const timeRecv = msg.timeRecv
+
+      if ((timeSent < timeRecv && t >= timeSent && t <= timeRecv) ||
+        (timeSent > timeRecv && t <= timeSent && t >= timeRecv)) {
+        this.graph.showMsg(msg, idx, (t - timeSent) / (timeRecv - timeSent))
+        this.chart.outlineMsg(true, idx)
+      }
+      else if (t === timeRecv && t === timeSent) {
+        this.graph.showMsg(msg, idx, 0.5)
+        this.chart.outlineMsg(true, idx)
+      }
+
+      else {
+        this.graph.clearMsgNodes([idx])
+        this.chart.outlineMsg(false, idx)
+      }
+    })
+  }
+
+  replay() {
+    const self = this
+    this.chart.autoScroll(false)
+    d3.select("#viz")
+      .transition("replay")
+      .duration((self.chart.times[self.chart.times.length - 1] - self.time) / this.speed)
+      // .duration(50000)
+      .ease(d3.easeLinear)
+      .tween("replayTween", replayTween)
+      .on("end", () => document.getElementById("play-button").innerText = "replay")
+
+    function replayTween() {
+      let i = d3.interpolateNumber(self.time, self.chart.times[self.chart.times.length - 1])
+      return function (t: number) {
+        self.time = i(t)
+        self.slider.setWidth(
+          (self.time - self.chart.times[0]) /
+          (self.chart.times[self.chart.times.length - 1] - self.chart.times[0])
+        )
+        self.updateGraph(self.time)
+      }
+    }
+
+  }
+
+  updateReplay() {
+    if (d3.active(document.getElementById("viz"), "replay") !== null) {
+      this.stopReplay()
+      this.replay()
+    }
+  }
+
+  stopReplay() {
+    d3.select("#viz").interrupt("replay")
   }
 }
 

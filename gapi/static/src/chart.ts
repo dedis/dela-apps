@@ -2,15 +2,16 @@ import * as d3 from 'd3'
 import { NodesEntity } from "./nodes"
 import { datai, SENT, RECV } from './message'
 import { getSortedIdx } from './utils'
+import { timeDays } from 'd3'
 
 export { Chart }
 
 /**
- * @param svg Main svg containing chart
+ * @param container Svg container (contains labels, timescale and chart)
+ * @param svg Main svg chart
  * @param svgLabels Top sticky labels
  * @param svgScale Left sticky scale
- * @param svgPadd Top left corner svg used for padding
- * @param w Width of color pins (squares below labels) should be same odd/even parity as vertical lines 
+ * @param pinWidth Width of color pins (squares below labels) should be same odd/even parity as vertical lines 
  * @param gapLabelPin Gap between text labels and color pins
  * @param r Message node radius
  * @param marginBottom Margin from bottom of vertical lines to bottom of SVG
@@ -29,22 +30,22 @@ export { Chart }
  * @param spaceScaleY Linear scale mapping time differences between timestamps to pixel between 0 and {maxSpaceY}
  * @param timeScale Scale used to position formatted timestamps on left axis
  * @param axis d3 left axis used to build {timeScale}
- * @param tickValue Tick values explicitly given to time scale (automatic if undefined)
  * @param minSpaceX Minimum space between vertical lines in pixels
  * @param maxSpaceY Minimum space between messages in pixels
  * @param idxLut Look up table mapping [SENT, RECV] timestamps from messages idx to {times} idx
  * @param transitionDuration TimeScale, circles, lines and popup transition duration
+ * @param autoScrl If true, chart automatically transitins to bottom
  */
 class Chart {
 
+  readonly container: HTMLElement
   readonly svg: d3.Selection<SVGElement, {}, HTMLElement, any>
   readonly svgLabels: d3.Selection<SVGElement, {}, HTMLElement, any>
   readonly svgScale: d3.Selection<SVGElement, {}, HTMLElement, any>
-  readonly svgPadd: d3.Selection<SVGElement, {}, HTMLElement, any>
 
   readonly nodes: NodesEntity[] | null
 
-  readonly w: number
+  readonly pinWidth: number
   readonly gapLabelPin: number
   readonly r: number
   readonly marginBottom: number
@@ -60,7 +61,6 @@ class Chart {
   readonly popupWidth: number
   readonly popupMaxHeight: number
 
-  readonly transitionDuration: number
 
   times: Array<number>
 
@@ -74,18 +74,22 @@ class Chart {
 
   axis: d3.Selection<SVGElement, {}, HTMLElement, any>
 
-  tickValue: Date
-
   minSpaceX: number
 
   maxSpaceY: number
 
   idxLut: Array<Array<number>>
   // Ex: idxLut = [[0,3],[1,2]]    times = [100,103,107,111]
-  // Message 1 sent at 100, recv at 111; Message 2 sent at 103, recv at 107
+  // Message 0 sent at 100, recv at 111; Message 1 sent at 103, recv at 107
+
+  autoScrl: boolean
+  transitionDuration: number
 
   constructor(nodes: NodesEntity[] | null) {
     this.nodes = nodes
+    this.nodes.forEach((d: any) => d.display = "block")
+
+    this.container = document.getElementById("svg-chart-container")
     this.svg = d3.select("#svg-chart")
     this.svgLabels = d3.select("#svg-labels")
     this.svgScale = d3.select("#svg-scale")
@@ -94,10 +98,10 @@ class Chart {
     this.spaceScaleY = d3.scaleLinear()
     this.timeScale = d3.scaleTime()
 
-    this.w = 11
+    this.pinWidth = 11
     this.gapLabelPin = 3
     this.r = 5
-    this.marginBottom = 30
+    this.marginBottom = 50
     this.offset = 2 * this.r
     this.padding = 0.1
 
@@ -106,19 +110,20 @@ class Chart {
     this.tickSpace = 100
     this.dateFormat = "%m/%d/%Y"
     this.timeFormat = "%H:%M:%S.%L"
-    this.tickValue = undefined
 
     this.popupWidth = 210
     this.popupMaxHeight = 160
 
-    this.minSpaceX = 300
+    this.minSpaceX = 200
     this.maxSpaceY = 100
 
-    this.transitionDuration = 600
+    this.setTransitionDuration()
+
+    this.autoScrl = true
   }
 
   public display() {
-
+    const self: Chart = this
     this.svg.selectAll('*').remove()
     this.svgLabels.selectAll('*').remove()
     this.svgScale.selectAll('*').remove()
@@ -127,14 +132,11 @@ class Chart {
     this.times = []
     this.pixelPos = []
     this.idxLut = []
-    // this.axis.exit()
 
-    const parent = d3.select("#svg-chart-container").node() as HTMLElement
     const width = Math.max(
       this.minSpaceX * (this.nodes.length + 2 * this.padding),
-      parent.clientWidth - this.scaleWidth
+      this.container.clientWidth - this.scaleWidth
     )
-    this.svg.attr("height", parent.clientHeight)
     this.svg.style("width", width)
     this.svgLabels.style("width", width)
     this.svgScale.attr("width", this.scaleWidth)
@@ -153,41 +155,49 @@ class Chart {
       .data(this.nodes)
       .enter()
       .append("text")
+      .attr("class", (d: NodesEntity) => "label " + d.id)
       .text((d: NodesEntity) => d.id)
       .attr("x", (d: NodesEntity) => this.xScale(d.id))
 
     const textHeight = (this.svgLabels.select("text").node() as SVGTextElement).getBBox().height
-    this.svgLabels.attr("height", textHeight + this.w + this.gapLabelPin)
-    d3.select("#padding").style("height", textHeight + this.w + this.gapLabelPin + "px")
+    this.svgLabels.attr("height", textHeight + this.pinWidth + this.gapLabelPin)
+    d3.select("#padding").style("height", textHeight + this.pinWidth + this.gapLabelPin + "px")
 
     this.svgLabels
       .append("g")
       .attr("class", "color-pin")
-      .attr("transform", `translate(${-Math.ceil(this.w / 2)}, ${textHeight + this.gapLabelPin})`)
+      .attr("transform", `translate(${-Math.ceil(this.pinWidth / 2)}, ${textHeight + this.gapLabelPin})`)
       .selectAll("rect")
       .data(this.nodes)
       .enter()
       .append("rect")
+      .attr("class", (d: NodesEntity) => "pin " + d.id)
       .attr("x", (d: NodesEntity) => this.xScale(d.id))
       .attr("fill", (d: NodesEntity) => d.color)
-      .attr("width", this.w)
-      .attr("height", this.w)
-      .on("click", function () {
-        // TO DO
+      .attr("width", this.pinWidth)
+      .attr("height", this.pinWidth)
+      .on("click", (d: NodesEntity) => {
+        d3
+          .selectAll(".popup-label")
+          .filter("." + d.id)
+          .style("display", "block")
       })
 
+    addLabelPopup()
+
     this.svg
+      .attr("height", this.container.clientHeight - this.svgLabels.node().clientHeight)
       .append('g')
       .attr('class', 'chart-vlines')
       .selectAll('line')
       .data(this.nodes)
       .enter()
       .append('line')
-      .attr('id', (d: NodesEntity) => "line" + d.id)
+      .attr("class", (d: NodesEntity) => "vline " + d.id)
       .attr("x1", (d: NodesEntity) => this.xScale(d.id))
       .attr("x2", (d: NodesEntity) => this.xScale(d.id))
       .attr("y1", 0)
-      .attr("y2", this.svg.attr("height"))
+      .attr("y2", parseFloat(this.svg.attr("height")) - this.marginBottom)
 
     this.svg
       .append("g")
@@ -197,6 +207,45 @@ class Chart {
     this.axis = this.svgScale
       .append("g")
       .attr("transform", `translate(${this.scaleWidth - this.scaleAxisWidth},0)`)
+
+    this.lineCursor("add")
+
+    function addLabelPopup() {
+      d3.select("body").on("mouseup",
+        () => d3.selectAll(".popup-label").style("display", "none"))
+
+      const popup = d3
+        .select(self.svgLabels.node().parentElement)
+        .selectAll(".popup-label")
+        .data(self.nodes)
+        .enter()
+        .append("div")
+        .attr("class", (d: NodesEntity) => "popup-label " + d.id)
+        .style("transform", (d: NodesEntity) => {
+          if (self.nodes[self.nodes.length - 1].id === d.id)
+            return `translate(calc(${self.scaleWidth - self.pinWidth}px - 100%), -50%)`
+          return `translate(${self.scaleWidth + self.pinWidth}px, -50%)`
+        })
+        .style("left", (d: NodesEntity) => self.xScale(d.id) + "px")
+        .style("top", textHeight + self.gapLabelPin + self.pinWidth / 2 + "px")
+        .style("display", "none")
+      popup
+        .append("button")
+        .attr("class", "viz-button hide-button")
+        .text("HIDE")
+        .style("background", (d: NodesEntity) => d.color)
+        .on("click", function (this, d) {
+          self.toggleHide(this, d.id)
+        })
+      popup
+        .append("button")
+        .attr("class", "viz-button focus-button")
+        .text("FOCUS")
+        .style("background", (d: NodesEntity) => d.color)
+        .on("click", function (this, d) {
+          self.toggleFocus(this, d.id)
+        })
+    }
   }
 
   public addMsg(msg: datai, idx: number, status: number): SVGElement {
@@ -224,15 +273,16 @@ class Chart {
       // Insert new message in correct position
       this.svg
         .select(".chart-messages")
-        .insert("g", `[id="${idx + 1}"]`)
-        .attr("class", "chart-message")
+        .insert("g", `[id = "${idx + 1}"]`)
+        .attr("class", "chart-message " + host)
         .attr("id", idx)
+        .attr("display", this.nodes.find(d => host === d.id).display)
     }
     const circle = this.svg
       .select(".chart-messages")
-      .select(`[id="${idx}"]`)
+      .select(`[id = "${idx}"]`)
       .append("circle")
-      .attr("class", _class)
+      .attr("class", host + " " + _class)
       .attr("cx", this.xScale(host))
       .attr("cy", this.svg.attr("height"))
       .attr('r', this.r)
@@ -255,8 +305,43 @@ class Chart {
     return circle.node() as SVGElement
   }
 
-  private updatePos() {
+  public listen() {
     const self = this
+    document.getElementById('height-slider').oninput = function (this: HTMLInputElement) {
+      document.getElementById("height-slider-value").innerText = this.value
+      self.maxSpaceY = parseFloat(this.value) * 10
+      self.updatePos()
+    }
+
+    document.getElementById('width-slider').oninput = function (this: HTMLInputElement) {
+      document.getElementById("width-slider-value").innerText = this.value
+      self.minSpaceX = parseFloat(this.value) * 10
+      self.updateXPos()
+    }
+
+    document.getElementById('scroll-button').onclick = () => {
+      self.autoScroll(true)
+      self.scrollDown()
+
+    }
+
+    document.getElementById('performance-button').onclick = function (this: HTMLButtonElement) {
+      switch (this.innerText) {
+        case "flash_on":
+          this.innerText = "flash_off"
+          this.style.color = "white"
+          self.setTransitionDuration()
+          break
+        case "flash_off":
+          this.innerText = "flash_on"
+          this.style.color = "yellow"
+          self.transitionDuration = 0
+          break
+      }
+    }
+  }
+
+  private updatePos() {
     const timeDiff = []
     for (let i = 1; i < this.times.length; i++) {
       const diff = this.times[i] - this.times[i - 1]
@@ -275,6 +360,28 @@ class Chart {
     this.pixelPos = pixelDiff.map(((s: number) => (a: number) => s += a)(0))
     this.pixelPos.unshift(0)
 
+    const margin = this.marginBottom + this.offset
+
+    const vlineHeight = pixelDiff.reduce((d1, d2) => d1 + d2, 0) as number
+
+    this.svg
+      .transition().duration(this.transitionDuration)
+      .attr("height", vlineHeight + margin)
+
+    this.svg
+      .select(".chart-vlines")
+      .selectAll("line")
+      .transition().duration(this.transitionDuration)
+      .attr("y2", vlineHeight + this.offset)
+
+    this.updateTimeScale("idle")
+    this.updateMsgPos()
+    this.updatePopupPos()
+    this.scrollDown()
+  }
+
+  private updateMsgPos() {
+    const self = this
     this.svg
       .selectAll(".chart-message")
       .data(this.idxLut)
@@ -299,6 +406,8 @@ class Chart {
               .attr("x2", msg.select(".recv").attr("cx"))
               .attr("y1", self.svg.attr("height"))
               .attr("y2", self.svg.attr("height"))
+              .attr("class", "from" + getClassId(msg.select(".sent"))
+                + " to" + getClassId(msg.select(".recv")))
 
           msg
             .select("line")
@@ -310,21 +419,54 @@ class Chart {
         }
       })
 
-    const margin = this.marginBottom + this.offset
-    const vlineHeight = Math.max(
-      pixelDiff.reduce((d1, d2) => d1 + d2, 0) as number,
-      (this.svg.node().parentNode as HTMLElement).clientHeight - margin
-    )
+    function getClassId(circle: d3.Selection<SVGElement, {}, HTMLElement, any>) {
+      return self.nodes.find(d => circle.classed(d.id)).id
+    }
+  }
 
-    this.svg.attr("height", vlineHeight + margin)
+  // Time scale update
+  public updateTimeScale(status: string, time: Date = undefined) {
 
-    this.svg
-      .select(".chart-vlines")
-      .selectAll("line")
-      .attr("y2", vlineHeight + this.offset)
+    if (this.times !== undefined && this.times.length !== 0) {
+      this.timeScale
+        .domain([new Date(this.times[this.times.length - 1]), new Date(this.times[0])])
+        .range([this.pixelPos[this.pixelPos.length - 1] + this.offset, this.pixelPos[0] + this.offset])
+        .interpolate(d3.interpolateRound)
+      if (status === "idle")
+        this.axis
+          .transition().duration(this.transitionDuration)
+          .call(d3
+            .axisLeft(this.timeScale)
+            .ticks((this.pixelPos[this.pixelPos.length - 1] - this.pixelPos[0]) / this.tickSpace)
+            .tickFormat(d3.timeFormat(this.timeFormat)) as any
+          )
+      else if (status === "sliderMove") {
+        this.svgScale
+          .select('g')
+          .call(d3
+            .axisLeft(this.timeScale)
+            .tickValues([time])
+            .tickFormat(d3.timeFormat(this.timeFormat))
+          )
 
+        this.svgScale.select(".clone").remove()
+        this.svgScale
+          .select("text")
+          .clone()
+          .attr("class", "clone")
 
+        const text = this.svgScale
+          .select(".clone")
+        text
+          .attr("dy", parseFloat(text.attr("dy")) + 1 + "em")
+          .text(d3.timeFormat(this.dateFormat)(time))
+      }
+    }
+  }
+
+  private updatePopupPos() {
     // Update popup cy position if corresponding message node has moved
+    const self = this
     d3
       .selectAll(".popup")
       .each(function (this: HTMLDivElement) {
@@ -339,65 +481,104 @@ class Chart {
           .duration(self.transitionDuration)
           .style("top", top + "px")
       })
-
-    this.updateTimeScale()
   }
 
-  // Time scale update. When tickValue is undefined, scaling is auto
-  // Otherwise it displays one tick of value {tickValue}
-  public updateTimeScale() {
+  private updateXPos() {
+    const self = this
+    // const parent = d3.select("#svg-chart-container").node() as HTMLElement
+    // const width = Math.max(
+    //   this.minSpaceX * (this.nodes.length + 2 * this.padding),
+    //   parent.clientWidth - this.scaleWidth
+    // )
+    const width = this.minSpaceX * (this.nodes.length + 2 * this.padding)
+    this.svg.style("width", width)
+    this.svgLabels.style("width", width)
 
-    if (this.times !== undefined && this.times.length !== 0) {
-      this.timeScale
-        .domain([new Date(this.times[this.times.length - 1]), new Date(this.times[0])])
-        .range([this.pixelPos[this.pixelPos.length - 1] + this.offset, this.pixelPos[0] + this.offset])
-        .interpolate(d3.interpolateRound)
+    this.xScale
+      .domain(this.nodes.map(d => d.id))
+      .range([0, width])
+      .padding(this.padding)
+      .round(true)
 
-      const dist = this.pixelPos[this.pixelPos.length - 1] - this.pixelPos[0]
-      if (this.tickValue === undefined)
-        this.axis
-          .transition().duration(this.transitionDuration)
-          .call(d3
-            .axisLeft(this.timeScale)
-            .ticks(dist / this.tickSpace)
-            .tickFormat(d3.timeFormat(this.timeFormat)) as any
-          )
-      else {
-        this.svgScale
-          .select('g')
-          .call(d3
-            .axisLeft(this.timeScale)
-            .tickValues([this.tickValue])
-            .tickFormat(d3.timeFormat(this.timeFormat))
-          )
+    this.nodes.forEach((d: NodesEntity) => {
+      const idElements = d3.select(this.container).selectAll(`.${d.id} `)
+      const x = self.xScale(d.id)
+      idElements.filter(".label").attr("x", x)
+      idElements.filter(".pin").attr("x", x)
+      idElements.filter(".vline").attr("x1", x).attr("x2", x)
+      idElements.filter(".popup-label").style("left", x + "px")
+      idElements.filter("circle").attr("cx", x)
 
-        this.svgScale.select(".clone").remove()
-        this.svgScale
-          .select("text")
-          .clone()
-          .attr("class", "clone")
+      d3.select(this.container)
+        .selectAll(".popup")
+        .filter(`.to${d.id}`)
+        .filter("." + "recv")
+        .style("left", x + "px")
+      d3.select(this.container)
+        .selectAll(".popup")
+        .filter("." + d.id).filter("." + "sent")
+        .style("left", x + "px")
 
-        const text = this.svgScale
-          .select(".clone")
-        text
-          .attr("dy", parseFloat(text.attr("dy")) + 1 + "em")
-          .text(d3.timeFormat(this.dateFormat)(this.tickValue))
-      }
-      this.svgScale
-        .select("g")
-        .append("rect")
-        .attr("width", 3)
+      this.svg.selectAll(".from" + d.id).attr("x1", x)
+      this.svg.selectAll(".to" + d.id).attr("x2", x)
+    })
+
+    this.lineCursor("updateX")
+  }
+
+  private toggleHide(button: HTMLElement, id: string) {
+    const node = this.nodes.find(d => d.id === id)
+    node.display = node.display === "block" ? "none" : "block"
+    button.innerText = node.display === "block" ? "HIDE" : "SHOW"
+    this.svg
+      .selectAll(".chart-message")
+      .filter("." + node.id)
+      .style("display", node.display)
+    d3
+      .selectAll(".popup")
+      .filter("." + node.id)
+      .style("display", node.display)
+  }
+
+  private toggleFocus(button: HTMLElement, id: string) {
+    const node = this.nodes.find(d => d.id === id)
+    switch (button.innerText) {
+      case "FOCUS":
+        this.nodes.forEach(d => { d.display = d.id === node.id ? "block" : "none" })
+        d3.selectAll(".hide-button")
+          .data(this.nodes)
+          .text((d: NodesEntity) => d.id === id ? "HIDE" : "SHOW")
+        d3.selectAll(".focus-button")
+          .data(this.nodes)
+          .text((d: NodesEntity) => d.id === id ? "UNFOCUS" : "FOCUS")
+        this.svg.selectAll(".chart-message").style("display", "none")
+        this.svg.selectAll(".chart-message").filter("." + node.id).style("display", "block")
+        d3.selectAll(".popup").style("display", "none")
+        d3.selectAll(".popup")
+          .filter("." + node.id)
+          .style("display", "block")
+        break
+      case "UNFOCUS":
+        this.nodes.forEach(d => d.display = "block")
+        button.innerText = "FOCUS"
+        this.svg.selectAll(".chart-message").style("display", "block")
+        d3.selectAll(".popup").style("display", "block")
+        d3.selectAll(".hide-button").text("HIDE")
+        break
     }
   }
 
-  public changeCircleState(circle: SVGElement, msg: datai): boolean {
+  public toggleState(circle: SVGElement, msg: datai, status: number): boolean {
+    const status_string = status === SENT ?
+      "sent" : status === RECV ? "recv" : undefined
+
     if (d3.select(circle).classed("selected")) {
       d3.select(circle)
         .attr("fill", msg.color)
         .attr("stroke", "transparent")
         .classed("selected", false)
 
-      d3.select("#popup" + circle.parentElement.id).remove()
+      d3.select("#popup" + circle.parentElement.id + status_string).remove()
 
       return true
     }
@@ -424,25 +605,20 @@ class Chart {
       "Sent to " + msg.toNode : status === RECV ? "Received from " + msg.fromNode : "Unknown"
     const t = d3.timeFormat(this.dateFormat + " " + this.timeFormat)(new Date(time))
 
-    // Cannot use circle.getAttribute("cy") because the attribute is
-    // blocked by the possible current translation transition of circles. 
-    const cx = this.xScale(host) //parseFloat(circle.getAttribute("cx"))
-    const cy = this.pixelPos[this.idxLut[parseInt(circle.parentElement.id)][status]]
-
-    const svgWidth = parseFloat(this.svg.style("width"))
-    // If circle is on the last vertical line, show message to its left (right otherwise)
-    const left = svgWidth - cx > this.popupWidth ?
-      cx + 2 * this.r : cx - this.popupWidth - 2 * this.r
-
     const popup = d3
       .select(this.svg.node().parentElement)
       .append("div")
-      .style("transform", `translate(${this.scaleWidth}px, ${this.offset}px)`)
-      .attr("class", "popup " + status_string)
-      .attr("id", "popup" + circle.parentElement.id)
+      .style("transform", () => {
+        // If circle is on the last vertical line, show message to its left (right otherwise)
+        if (this.nodes[this.nodes.length - 1].id === host)
+          return `translate(calc(${this.scaleWidth - 2 * this.r}px - 100%), ${this.offset}px)`
+        return `translate(${this.scaleWidth + 2 * this.r}px, ${this.offset}px)`
+      })
+      .attr("class", `popup ${msg.fromNode} to${msg.toNode} ${status_string}`)
+      .attr("id", "popup" + circle.parentElement.id + status_string)
       .style("width", this.popupWidth + "px")
       .style("max-height", this.popupMaxHeight + "px")
-      .style("left", left + "px")
+      .style("left", this.xScale(host) + "px")
       .style("background", msg.color)
       .on("click", function () {
         d3.select(this).raise()
@@ -476,18 +652,18 @@ class Chart {
       .attr("class", "popup-buttons")
       .style("background", msg.color)
 
-    const goToGraphBtn = popupButtons
+    const goToBtn = popupButtons
       .append("div")
-      .attr("class", "icon-info go-to-graph")
+      .attr("class", "icon-info go-to")
 
-    goToGraphBtn
+    goToBtn
       .append("span")
       .attr("class", "material-icons icon")
       .text("reply")
 
-    goToGraphBtn
+    goToBtn
       .append("span")
-      .text("Go to graph")
+      .text("Go to")
       .style("font-style", "italic")
 
     popupButtons
@@ -495,13 +671,16 @@ class Chart {
       .attr("class", "popup-close material-icons")
       .text("close")
       .on("click", function () {
-        self.changeCircleState(circle, msg)
+        self.toggleState(circle, msg, status)
         d3.select(this.parentNode.parentNode as any).remove()
       })
 
+    // Cannot use circle.getAttribute("cy") because the attribute is
+    // blocked by the possible current translation transition of circles. 
+    const cy = this.pixelPos[this.idxLut[parseInt(circle.parentElement.id)][status]]
     popup.style("top", this.getPopupTop(popup, cy) + "px")
 
-    return goToGraphBtn.node() as HTMLElement
+    return goToBtn.node() as HTMLElement
   }
 
   private getPopupTop(popup: any, cy: number) {
@@ -519,57 +698,148 @@ class Chart {
         .classed("outlined", outlined)
     else
       this.svg
-        .select(`[id="${idx}"]`)
+        .select(`[id = "${idx}"]`)
         .classed("outlined", outlined)
   }
 
-  public lineCursor(status: string) {
-    switch (status) {
-      case "add":
-        const triStrokeWidth = 2
-        const x1 = this.xScale(this.nodes[0].id) - this.r - triStrokeWidth
-        const x2 = this.xScale(this.nodes[this.nodes.length - 1].id) + this.r + triStrokeWidth
+  public lineCursor(status: string, time: Date = undefined) {
+    if (status === "add") {
+      const triStrokeWidth = 2
+      const x1 = this.xScale(this.nodes[0].id) - this.r - triStrokeWidth
+      const x2 = this.xScale(this.nodes[this.nodes.length - 1].id) + this.r + triStrokeWidth
 
-        const g = this.svg
-          .append("g")
-          .attr("id", "line-cursor")
-        g
-          .append("line")
-          .attr("x1", x1)
-          .attr("x2", x2)
-        g
-          .append("polygon")
-          .attr("class", "triangle")
-          .attr("points", `${x1 - 3},-3 ${x1 - 3},3 ${x1},0`)
-          .attr("stroke-width", triStrokeWidth)
-        g
-          .append("polygon")
-          .attr("class", "triangle")
-          .attr("points", `${x2 + 3},-3 ${x2 + 3},3 ${x2},0`)
-          .attr("stroke-width", triStrokeWidth)
-        break
+      const g = this.svg
+        .append("g")
+        .attr("id", "line-cursor")
+        .attr("visibility", "hidden")
+      g
+        .append("line")
+        .attr("x1", x1)
+        .attr("x2", x2)
+      g
+        .append("polygon")
+        .attr("class", "triangle")
+        .attr("points", `${x1 - 3}, -3 ${x1 - 3}, 3 ${x1}, 0`)
+        .attr("stroke-width", triStrokeWidth)
+      g
+        .append("polygon")
+        .attr("class", "triangle")
+        .attr("points", `${x2 + 3}, -3 ${x2 + 3}, 3 ${x2}, 0`)
+        .attr("stroke-width", triStrokeWidth)
+    }
 
-      case "update":
-        this.svg
-          .select("#line-cursor")
-          .attr("transform", `translate(0, ${this.timeScale(this.tickValue)})`)
-        break
-
-      case "remove":
-        this.svg
-          .select("#line-cursor")
-          .remove()
-        break
-
-      default:
-        console.error("Unknown status")
+    else if (status === "updateY") {
+      this.svg
+        .select("#line-cursor")
+        .attr("transform", `translate(0, ${this.timeScale(time)})`)
+        .attr("visibility", "visible")
+    }
+    else if (status === "updateX") {
+      const w1 = -3
+      const w2 = 3
+      const x1 = this.xScale(this.nodes[0].id) - this.r + w1
+      const x2 = this.xScale(this.nodes[this.nodes.length - 1].id) + this.r + w2
+      const cursor = this.svg.select("#line-cursor")
+      cursor
+        .select("line")
+        .attr("x1", x1)
+        .attr("x2", x2)
+      cursor
+        .selectAll("polygon")
+        .data([[x1, w1], [x2, w2]])
+        .attr("points", (d: Array<number>) => `${d[0] + d[1]}, -3 ${d[0] + d[1]}, 3 ${d[0]}, 0`)
     }
   }
 
-  public setScroll() {
-    const el = d3.select("#svg-chart-container").node() as HTMLElement
-    el.scrollTop = this.timeScale(this.tickValue) - (el.clientHeight - parseFloat(this.svgLabels.attr("height"))) / 2
+
+  public setScroll(time: Date) {
+    const el = this.container
+    el.scrollTop = this.timeScale(time) - (el.clientHeight - parseFloat(this.svgLabels.attr("height"))) / 2
   }
+
+  public scrollDown() {
+
+    if (this.autoScrl) {
+      if (this.container.scrollHeight - this.container.scrollTop > 100 &&
+        d3.active(this.container, "scroll") === null) {
+
+        d3.select(this.container)
+          .transition("scroll")
+          .duration(this.transitionDuration)
+          .tween("scrollTween", scrollTopTween(this.container.scrollHeight))
+      }
+    }
+
+    function scrollTopTween(scrollTop: number) {
+      return function () {
+        let i = d3.interpolateNumber(this.scrollTop, scrollTop);
+        return function (t: number) { this.scrollTop = i(t); };
+      };
+    }
+    // if (set) {
+    //   const container = this.svg.node().parentElement.parentElement
+    //   container.scrollTop = container.scrollHeight
+    //   d3.select("#scroll-button").classed("scroll-unset", false)
+    // }
+    // else {
+    //   d3.select("#scroll-button").classed("scroll-unset", true)
+    // }
+  }
+
+  public autoScroll(set: boolean) {
+    this.autoScrl = set
+    if (!set)
+      d3.select(this.container).interrupt("scroll")
+    d3.select("#scroll-button").style("height", set ? "100%" : "18px")
+  }
+
+  private setTransitionDuration() {
+    this.transitionDuration = 200
+  }
+
+  public parseTime(time: Date) {
+    return d3.timeFormat(this.dateFormat + " " + this.timeFormat)(time)
+  }
+
+  public stop(node: NodesEntity) {
+
+  }
+
+  // public cursorTransition(time:Date) {
+  //   const self = this
+  //   d3.select("#line-cursor")
+  //     .transition("replay")
+  //     // .duration(this.times[this.times.length - 1] - this.times[0])
+  //     .duration(50000)
+  //     .ease(d3.easeLinear)
+  //     .tween("cursorTween", cursorTween(this.timeScale(new Date(this.times[this.times.length - 1]))))
+  //   // .attr("transform", `translate(0, ${})`)
+
+  //   // this.times[this.times.length - 1] - this.times[0]
+
+  //   function cursorTween(lastPos: number) {
+  //     return function () {
+  //       const bar = d3.select('.progress-bar')
+  //       let i = d3.interpolateDate(time, new Date(self.times[self.times.length - 1]))
+  //       let k = d3.interpolateNumber(parseFloat(bar.style("width")), 100)
+  //       return function (t: number) {
+  //         self.tickValue = i(t)
+  //         self.updateTimeScale("replay")
+  //         self.lineCursor("updateY")
+  //         bar.style("width", k(t) + "%")
+  //       }
+  //     };
+  //   }
+  // }
+
+  // public cursorTransition2() {
+  //   d3.select("#line-cursor")
+  //     .attr("transform", `translate(0, ${this.timeScale(new Date(this.times[0]))})`)
+  //     .transition()
+  //     .ease(d3.easeLinear)
+  //     .tween("CursorTween", this.times[this.times.length - 1] - this.times[0])
+  //     .attr("transform", `translate(0, ${this.timeScale(new Date(this.times[this.times.length - 1]))})`)
+  // }
 }
 
 
