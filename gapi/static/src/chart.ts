@@ -643,9 +643,10 @@ class Chart {
           .text(d[1])
       })
 
+    const str = JSON.stringify(msg.message, null, 2)
     popup
-      .insert("div", "div")
-      .text(msg.message)
+      .insert('div', 'div')
+      .text(str)
 
     const popupButtons = popup
       .insert("div", "div")
