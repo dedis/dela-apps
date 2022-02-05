@@ -2,11 +2,12 @@ export { Graph }
 
 import * as d3 from 'd3'
 import './stylesheets/styles.scss'
-import { NodesEntity } from './nodes'
+import { nodes, NodesEntity } from './nodes'
 import { datai } from './message'
 import { SENT, RECV, REPLAY } from './message'
 import { getPalette } from './utils'
 import { Slider } from './slider'
+import { gray, select } from 'd3'
 
 /**
  * Graph implements the primitives to create and update the graph.
@@ -100,6 +101,9 @@ class Graph {
         .on("end", dragended))
       .on("click", updateNodeActions)
 
+
+    updateNodeActions(this.nodes[0])
+
     gNode.append('circle')
       .attr('r', this.node_rad)
       .attr('fill', (d: NodesEntity) => d.color)
@@ -115,6 +119,15 @@ class Graph {
     this.simulation
       .nodes(this.nodes as undefined)
       .on('tick', ticked)
+
+
+    // d3.select("#node-id").style("background", "grey")
+    // d3.selectAll(".settings-container").style("background", `linear-gradient(to right,grey, grey)`)
+    // d3.select("#graph-settings").style("background", `linear-gradient(to right,grey ${w}px, grey 50%, ${d.color} 70%)`)
+    // d3
+    // .select("#chart-settings")
+    // .transition().duration(transitionDuration)
+    // .style("background", `linear-gradient(to left,grey ${w}px, grey 50%, ${d.color} 70%)`)
 
     function ticked() {
 
@@ -159,14 +172,32 @@ class Graph {
     }
 
     function updateNodeActions(d: NodesEntity) {
-      const actions = d3.select("#node-actions")
-      actions
-        .attr("class", d.id)
-        .selectAll(".action")
-        .style("background", d.color)
-      actions.select("#node-id")
-        .style("background", d.color)
+      const transitionDuration = 300
+      const wGraph = (d3
+        .select("#graph-settings")
+        .select(".settings")
+        .node() as HTMLElement)
+        .clientWidth
+      const wChart = (d3
+        .select("#chart-settings")
+        .select(".node-settings")
+        .node() as HTMLElement)
+        .clientWidth
+      console.log(wChart)
+      d3
+        .select("#graph-settings")
+        .transition().duration(transitionDuration)
+        .style("background", `linear-gradient(to right,grey ${wGraph}px, grey 60%, ${d.color} 80%)`)
+        .select("#settings-node-id")
         .text(d.id)
+      d3
+        .select("#chart-settings")
+        .transition().duration(transitionDuration)
+        .style("background", `linear-gradient(to right, ${d.color} ${wChart}px,${d.color} 20%, grey 40%)`)
+      d3
+        .select("#node-id")
+        .transition().duration(transitionDuration)
+        .style("background", d.color)
     }
   }
 

@@ -6,8 +6,7 @@ import { datai, dataSent, dataRecv } from './message'
 import { SENT, RECV, REPLAY } from './message'
 import { Chart } from './chart'
 import { Resizer } from './resizer'
-import { getSortedIdx } from './utils'
-import { select } from 'd3'
+import { getSortedIdx, supportsPassive } from './utils'
 
 export function sayHi() {
   document.getElementById('settings-button').addEventListener('click', function () {
@@ -90,7 +89,6 @@ class Viz {
 
     messageListen()
     stopListen()
-    // scrollListen()
     playListen()
     speedListen()
     sliderListen()
@@ -112,8 +110,8 @@ class Viz {
       self.data = []
 
       self.nodes.nodes.forEach((node) => {
-        fetch(node.proxy + "/start")
-          .then(response => { if (!response.ok) console.error("Server error: start node fail") })
+        // fetch(node.proxy + "/start")
+        //   .then(response => { if (!response.ok) console.error("Server error: start node fail") })
 
         const sendSrc = new EventSource(node.proxy + "/sent")
         Viz.sources.push(sendSrc)
@@ -249,7 +247,7 @@ class Viz {
         liveIconStyle.color = "red"
         liveIconStyle.opacity = "1"
         liveIconStyle.cursor = "default"
-        self.chart.autoScroll(true)
+        self.chart.autoScroll = true
         self.chart.scrollDown()
         self.slider.setWidth(1)
         document.getElementById("play-button").innerText = "pause";
@@ -267,7 +265,7 @@ class Viz {
         const liveIconStyle = document.getElementById("live-icon").style
 
         liveOn = false
-        self.chart.autoScroll(false)
+        self.chart.autoScroll = false
         liveIconStyle.color = "#4a4a4a"
         liveIconStyle.opacity = "0.9"
         if (stop !== true)
@@ -291,7 +289,7 @@ class Viz {
 
     function sliderListen() {
       self.slider.slider.addEventListener('mousedown', function () {
-        self.chart.autoScroll(false)
+        self.chart.autoScroll = false
         pauseLive()
         document.getElementById("play-button").innerText = "play_arrow"
         self.stopReplay()
@@ -320,52 +318,44 @@ class Viz {
       }
     }
 
-    self.chart.container.addEventListener("wheel", () => {
-      this.stopReplay()
-      self.chart.autoScroll(false)
-    })
+    // self.chart.container.addEventListener("wheel", function (e) {
+    //   if (e.ctrlKey) {
+
+    //   }
+    //   // this.stopReplay()
+    //   self.chart.autoScroll = false
+    // }, supportsPassive ? { passive: true } : false)
 
     function actionsListen() {
 
       document.getElementById("stop-node-button").onclick = function (this: HTMLButtonElement) {
-        const nodeId = document.getElementById("node-id").innerText
+        const nodeId = document.getElementById("settings-node-id").innerText
         const node = self.nodes.nodes.find(d => d.id === nodeId)
-
         if (node !== undefined) {
           switch (this.innerText) {
-            case "STOP":
+            case "block":
               fetch(node.proxy + "/stop")
                 .then(response => { if (!response.ok) console.error("Server error: stop node fail") })
-              this.innerText = "START"
+              this.innerText = "play_circle"
               self.chart.stop(node)
               break
-            case "START":
+            case "play_circle":
               fetch(node.proxy + "/start")
                 .then(response => { if (!response.ok) console.error("Server error: start node fail") })
-              this.innerText = "STOP"
+              this.innerText = "block"
               break
           }
         }
       }
-      document.getElementById("action2-node-button").onclick = function (this: HTMLButtonElement) {
-        self.data.forEach((msg, i) => {
-          if (msg.timeRecv === undefined) {
-            msg.timeRecv = msg.timeSent + 3000 * Math.random()
-            const circle = self.chart.addMsg(msg, i, RECV)
-            // circleListen(circle, msg, RECV)
-          }
-        })
-      }
-
     }
   }
 
   updateGraph(t: number) {
     const timeDate = new Date(this.time)
     this.slider.timer.innerText = this.chart.parseTime(timeDate)
-    this.chart.updateTimeScale("sliderMove", timeDate)
-    this.chart.lineCursor("updateY", timeDate)
-    this.chart.setScroll(timeDate)
+    this.chart.updateTimeScale("sliderMove", t)
+    this.chart.lineCursor("updateY", t)
+    this.chart.setScroll(t)
 
     this.data.forEach((msg, idx) => {
       const timeSent = msg.timeSent
@@ -390,14 +380,14 @@ class Viz {
 
   replay() {
     const self = this
-    this.chart.autoScroll(false)
+    this.chart.autoScroll = false
     d3.select("#viz")
       .transition("replay")
       .duration((self.chart.times[self.chart.times.length - 1] - self.time) / this.speed)
-      // .duration(50000)
       .ease(d3.easeLinear)
       .tween("replayTween", replayTween)
       .on("end", () => document.getElementById("play-button").innerText = "replay")
+
 
     function replayTween() {
       let i = d3.interpolateNumber(self.time, self.chart.times[self.chart.times.length - 1])

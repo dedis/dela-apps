@@ -1,9 +1,9 @@
 
 .svg-flex-container {
   
-  .settings-container {
+  .settings {
     button#reset-button {
-      margin: 0 10px 0 0;
+      margin: 0 10px 0 10px;
       cursor: pointer;
     }
 
@@ -17,35 +17,14 @@
       }
     }
   }
+
+
+
   #svg-graph-container{
     display: flex;
     flex: 1;
     position: relative;
 
-    #node-actions {
-      position: absolute;
-      color: white;
-      top: 10px;
-      left: 10px;
-
-      button.action {
-        display: block;
-        width: 100%;
-        padding: 2px;
-        background-color: black;
-        cursor: pointer;
-      }
-      #node-id {
-        box-sizing: border-box;
-        width: 100%;
-        padding: 5px 5px 2px 5px;
-        border-bottom: 1px solid white;
-        border-radius: 3px 3px 0 0;
-        background-color: black;
-        text-align: center;
-      }
-      
-    }
     #svg-graph {
       flex: 1;
       width: 100%;

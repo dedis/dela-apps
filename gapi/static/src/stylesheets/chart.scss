@@ -193,6 +193,10 @@
         display: none;
       }
 
+      .popup-message {
+        overflow-x: scroll;
+      }
+
       // .popup-text {
         .popup-buttons {
           display: flex;

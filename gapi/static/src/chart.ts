@@ -1,8 +1,8 @@
 import * as d3 from 'd3'
 import { NodesEntity } from "./nodes"
 import { datai, SENT, RECV } from './message'
-import { getSortedIdx } from './utils'
-import { timeDays } from 'd3'
+import { getSortedIdx, supportsPassive } from './utils'
+import { timeDays, transition } from 'd3'
 
 export { Chart }
 
@@ -33,8 +33,11 @@ export { Chart }
  * @param minSpaceX Minimum space between vertical lines in pixels
  * @param maxSpaceY Minimum space between messages in pixels
  * @param idxLut Look up table mapping [SENT, RECV] timestamps from messages idx to {times} idx
- * @param transitionDuration TimeScale, circles, lines and popup transition duration
- * @param autoScrl If true, chart automatically transitins to bottom
+ * @param _transitionDuration TimeScale, circles, lines and popup transition duration
+ * @param _autoScroll If true, chart automatically transitins to bottom
+ * @param zoomShiftStart Memorizes the time value where shift zoom began
+ * @param mousePosSvg tracks mouse position inside svg
+ * @param mousePosContainer tracks mouse position inside svg container
  */
 class Chart {
 
@@ -70,7 +73,7 @@ class Chart {
 
   spaceScaleY: d3.ScaleLinear<number, number>
 
-  timeScale: d3.ScaleTime<number, number>
+  timeScale: d3.ScaleLinear<number, number>
 
   axis: d3.Selection<SVGElement, {}, HTMLElement, any>
 
@@ -82,8 +85,11 @@ class Chart {
   // Ex: idxLut = [[0,3],[1,2]]    times = [100,103,107,111]
   // Message 0 sent at 100, recv at 111; Message 1 sent at 103, recv at 107
 
-  autoScrl: boolean
-  transitionDuration: number
+  _autoScroll: boolean
+  _transitionDuration: number
+  zoomShiftStart: number
+  mousePosSvg: number
+  mousePosContainer: number
 
   constructor(nodes: NodesEntity[] | null) {
     this.nodes = nodes
@@ -96,7 +102,7 @@ class Chart {
 
     this.xScale = d3.scalePoint()
     this.spaceScaleY = d3.scaleLinear()
-    this.timeScale = d3.scaleTime()
+    this.timeScale = d3.scaleLinear()
 
     this.pinWidth = 11
     this.gapLabelPin = 3
@@ -119,7 +125,7 @@ class Chart {
 
     this.setTransitionDuration()
 
-    this.autoScrl = true
+    this._autoScroll = true
   }
 
   public display() {
@@ -309,7 +315,7 @@ class Chart {
     const self = this
     document.getElementById('height-slider').oninput = function (this: HTMLInputElement) {
       document.getElementById("height-slider-value").innerText = this.value
-      self.maxSpaceY = parseFloat(this.value) * 10
+      self.maxSpaceY = parseFloat(this.value) * 100
       self.updatePos()
     }
 
@@ -320,10 +326,68 @@ class Chart {
     }
 
     document.getElementById('scroll-button').onclick = () => {
-      self.autoScroll(true)
+      self.autoScroll = true
       self.scrollDown()
-
     }
+
+    this.svg.node().parentElement.onmousemove = function (this: HTMLElement, e) {
+      if (!e.shiftKey) {
+        self.mousePosSvg = self.timeScale.invert(e.offsetY)
+        self.mousePosContainer = e.clientY
+      }
+    }
+
+    // this.container.onmousemove = function (e) {
+    //   if (!e.shiftKey)
+    //     self.mousePosContainer = e.offsetY
+    // }
+
+    document.onkeyup = function (e) {
+
+      self.setTransitionDuration()
+      self.container.style.overflow = "scroll"
+    }
+    document.onkeydown = function (e) {
+
+      if (e.shiftKey) {
+        self._transitionDuration = 0
+        self.container.style.overflow = "hidden"
+      }
+    }
+
+    this.container.addEventListener("wheel", function (e) {
+      if (e.shiftKey) {
+        this.scrollTop = self.timeScale(self.mousePosSvg)
+          - self.mousePosContainer
+          + this.getBoundingClientRect().top + parseFloat(self.svgLabels.attr("height"))
+
+        self.maxSpaceY = Math.max(0, self.maxSpaceY - Math.sign(e.deltaY))
+        self.updatePos()
+      }
+      else {
+        // const matrix = window.getComputedStyle(self.svg.node().parentElement).transform
+        // const matrixValues = matrix.match(/matrix.*\((.+)\)/)[1].split(', ')
+        // const translateY = parseFloat(matrixValues[5])
+        // self.svg.node().parentElement.style.transform = `translate(0px,${translateY - e.deltaY}px)`
+        // d3.select(self.svg.node().parentElement).transform(`translate(0,${})`)
+        self.autoScroll = false
+      }
+
+    })
+    // d3.select(this.container).on("wheel", wheeled);
+
+    // function wheeled() {
+    //   console.log(d3.event.wheelDeltaY)
+    //   const container = d3.select(self.svg.node().parentElement)
+    //   const string = container.attr("transform")
+
+    //   const translate = string.substring(string.indexOf("(") + 1, string.indexOf(")")).split(",");
+
+    //   const dx = d3.event.wheelDeltaX + translate[0];
+    //   const dy = d3.event.wheelDeltaY + translate[1];
+    //   container.attr("transform", "translate(" + [dx, dy] + ")");
+    // }
+
 
     document.getElementById('performance-button').onclick = function (this: HTMLButtonElement) {
       switch (this.innerText) {
@@ -335,7 +399,7 @@ class Chart {
         case "flash_off":
           this.innerText = "flash_on"
           this.style.color = "yellow"
-          self.transitionDuration = 0
+          self._transitionDuration = 0
           break
       }
     }
@@ -365,13 +429,13 @@ class Chart {
     const vlineHeight = pixelDiff.reduce((d1, d2) => d1 + d2, 0) as number
 
     this.svg
-      .transition().duration(this.transitionDuration)
+      .transition().duration(this._transitionDuration)
       .attr("height", vlineHeight + margin)
 
     this.svg
       .select(".chart-vlines")
       .selectAll("line")
-      .transition().duration(this.transitionDuration)
+      .transition().duration(this._transitionDuration)
       .attr("y2", vlineHeight + this.offset)
 
     this.updateTimeScale("idle")
@@ -390,13 +454,13 @@ class Chart {
 
         msg
           .select(".sent")
-          .transition().duration(self.transitionDuration)
+          .transition().duration(self._transitionDuration)
           .attr("cy", self.pixelPos[d[SENT]])
 
         if (!msg.select(".recv").empty()) {
           msg
             .select(".recv")
-            .transition().duration(self.transitionDuration)
+            .transition().duration(self._transitionDuration)
             .attr("cy", self.pixelPos[d[RECV]])
 
           if (msg.select("line").empty())
@@ -411,7 +475,7 @@ class Chart {
 
           msg
             .select("line")
-            .transition().duration(self.transitionDuration)
+            .transition().duration(self._transitionDuration)
             // DO NOT USE msg.select(".recv").attr("cy")
             // -> Attribute cy is blocked by circle transition
             .attr("y1", self.pixelPos[d[SENT]])
@@ -425,28 +489,29 @@ class Chart {
   }
 
   // Time scale update
-  public updateTimeScale(status: string, time: Date = undefined) {
+  public updateTimeScale(status: string, time: number = undefined) {
 
     if (this.times !== undefined && this.times.length !== 0) {
       this.timeScale
-        .domain([new Date(this.times[this.times.length - 1]), new Date(this.times[0])])
+        .domain([this.times[this.times.length - 1], this.times[0]])
         .range([this.pixelPos[this.pixelPos.length - 1] + this.offset, this.pixelPos[0] + this.offset])
         .interpolate(d3.interpolateRound)
-      if (status === "idle")
+      if (status === "idle") {
         this.axis
-          .transition().duration(this.transitionDuration)
+          .transition().duration(this._transitionDuration)
           .call(d3
             .axisLeft(this.timeScale)
-            .ticks((this.pixelPos[this.pixelPos.length - 1] - this.pixelPos[0]) / this.tickSpace)
-            .tickFormat(d3.timeFormat(this.timeFormat)) as any
+            .ticks((this.pixelPos[this.pixelPos.length - 1] - this.pixelPos[0]) / this.tickSpace) as any
+            // .tickFormat(d3.timeFormat(this.timeFormat)) as any
           )
+      }
       else if (status === "sliderMove") {
         this.svgScale
           .select('g')
           .call(d3
             .axisLeft(this.timeScale)
             .tickValues([time])
-            .tickFormat(d3.timeFormat(this.timeFormat))
+            // .tickFormat(d3.timeFormat(this.timeFormat))
           )
 
         this.svgScale.select(".clone").remove()
@@ -459,7 +524,7 @@ class Chart {
           .select(".clone")
         text
           .attr("dy", parseFloat(text.attr("dy")) + 1 + "em")
-          .text(d3.timeFormat(this.dateFormat)(time))
+        // .text(d3.timeFormat(this.dateFormat)(time))
       }
     }
   }
@@ -478,7 +543,7 @@ class Chart {
         const top = self.getPopupTop(popup, cy)
         popup
           .transition()
-          .duration(self.transitionDuration)
+          .duration(self._transitionDuration)
           .style("top", top + "px")
       })
   }
@@ -534,6 +599,11 @@ class Chart {
       .selectAll(".chart-message")
       .filter("." + node.id)
       .style("display", node.display)
+    this.svgLabels
+      .selectAll(".pin")
+      .filter("." + node.id)
+      .transition().duration(200)
+      .style("fill-opacity", node.display === "block" ? 1 : 0.5)
     d3
       .selectAll(".popup")
       .filter("." + node.id)
@@ -554,16 +624,18 @@ class Chart {
         this.svg.selectAll(".chart-message").style("display", "none")
         this.svg.selectAll(".chart-message").filter("." + node.id).style("display", "block")
         d3.selectAll(".popup").style("display", "none")
-        d3.selectAll(".popup")
-          .filter("." + node.id)
-          .style("display", "block")
+        d3.selectAll(".popup").filter("." + node.id).style("display", "block")
+        this.svgLabels.selectAll(".pin").transition().duration(200).style("fill-opacity", 0.5)
+        this.svgLabels.selectAll(".pin").filter("." + node.id).transition().duration(200).style("fill-opacity", 1)
         break
+
       case "UNFOCUS":
         this.nodes.forEach(d => d.display = "block")
         button.innerText = "FOCUS"
         this.svg.selectAll(".chart-message").style("display", "block")
         d3.selectAll(".popup").style("display", "block")
         d3.selectAll(".hide-button").text("HIDE")
+        this.svgLabels.selectAll(".pin").transition().duration(200).style("fill-opacity", 1)
         break
     }
   }
@@ -646,6 +718,7 @@ class Chart {
     const str = JSON.stringify(msg.message, null, 2)
     popup
       .insert('div', 'div')
+      .attr("class", "popup-message")
       .text(str)
 
     const popupButtons = popup
@@ -703,7 +776,7 @@ class Chart {
         .classed("outlined", outlined)
   }
 
-  public lineCursor(status: string, time: Date = undefined) {
+  public lineCursor(status: string, time: number = undefined) {
     if (status === "add") {
       const triStrokeWidth = 2
       const x1 = this.xScale(this.nodes[0].id) - this.r - triStrokeWidth
@@ -753,20 +826,20 @@ class Chart {
   }
 
 
-  public setScroll(time: Date) {
+  public setScroll(time: number) {
     const el = this.container
     el.scrollTop = this.timeScale(time) - (el.clientHeight - parseFloat(this.svgLabels.attr("height"))) / 2
   }
 
   public scrollDown() {
 
-    if (this.autoScrl) {
+    if (this.autoScroll) {
       if (this.container.scrollHeight - this.container.scrollTop > 100 &&
         d3.active(this.container, "scroll") === null) {
 
         d3.select(this.container)
           .transition("scroll")
-          .duration(this.transitionDuration)
+          .duration(this._transitionDuration)
           .tween("scrollTween", scrollTopTween(this.container.scrollHeight))
       }
     }
@@ -787,15 +860,19 @@ class Chart {
     // }
   }
 
-  public autoScroll(set: boolean) {
-    this.autoScrl = set
-    if (!set)
+  public set autoScroll(val: boolean) {
+    this._autoScroll = val
+    if (!val)
       d3.select(this.container).interrupt("scroll")
-    d3.select("#scroll-button").style("height", set ? "100%" : "18px")
+    d3.select("#scroll-button").style("height", val ? "100%" : "18px")
+  }
+
+  public get autoScroll() {
+    return this._autoScroll
   }
 
   private setTransitionDuration() {
-    this.transitionDuration = 200
+    this._transitionDuration = 200
   }
 
   public parseTime(time: Date) {

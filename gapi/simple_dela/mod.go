@@ -42,7 +42,7 @@ func init() {
 // Use the value contract
 // Check the state
 func main() {
-	n := 3
+	n := 20
 
 	delapkg.Logger = delapkg.Logger.Level(zerolog.WarnLevel)
 
@@ -238,7 +238,7 @@ func listen(minogrpc *minogrpc.Minogrpc, addr string, stop chan struct{}) {
 		for {
 			select {
 			case in := <-ins:
-				message := fmt.Sprintf(dataRecv, "*not used*", in.Address.(session.Address).GetDialAddress(), time.Now().Unix(), in.Pkt.GetPacketID())
+				message := fmt.Sprintf(dataRecv, "*not used*", in.Address.(session.Address).GetDialAddress(), time.Now().UnixMicro(), in.Pkt.GetPacketID())
 				fmt.Fprintf(w, message)
 				flusher.Flush()
 			case <-r.Context().Done():
@@ -270,7 +270,7 @@ func listen(minogrpc *minogrpc.Minogrpc, addr string, stop chan struct{}) {
 			case out := <-outs:
 				msgContent := out.Pkt.GetMessage()
 
-				message := fmt.Sprintf(dataSent, msgContent, out.Address.(session.Address).GetDialAddress(), time.Now().Unix(), out.Pkt.GetPacketID())
+				message := fmt.Sprintf(dataSent, msgContent, out.Address.(session.Address).GetDialAddress(), time.Now().UnixMicro(), out.Pkt.GetPacketID())
 				fmt.Fprintf(w, message)
 
 				flusher.Flush()

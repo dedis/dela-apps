@@ -18,54 +18,29 @@
   <div class="header">
     <a class="logo" href="https://github.com/dedis/dela-apps" target="_blank"><img src="assets/logo.png"
         alt="logo" /></a>
+    <input type="text" placeholder="Search">
     <button type="button" id="settings-button" class="material-icons">settings</button>
 
     <div id="settings-panel" class="content-wrap">
       <div class="content">
         <div class="json-config">
           <textarea id="nodesData" rows="10" cols="50">
+
             {"nodes": [
-        {"id": "AB", "addr": "127.0.0.1:0001", "proxy": "http://127.0.0.1:8081/1"},
-        {"id": "AC", "addr": "127.0.0.1:0002", "proxy": "http://127.0.0.1:8081/2"},
-        {"id": "AD", "addr": "127.0.0.1:0003", "proxy": "http://127.0.0.1:8081/3"},
-        {"id": "AE", "addr": "127.0.0.1:0004", "proxy": "http://127.0.0.1:8081/4"},
-        {"id": "AF", "addr": "127.0.0.1:0005", "proxy": "http://127.0.0.1:8081/5"},
-        {"id": "AG", "addr": "127.0.0.1:0006", "proxy": "http://127.0.0.1:8081/6"},
-        {"id": "AH", "addr": "127.0.0.1:0007", "proxy": "http://127.0.0.1:8081/7"},
-        {"id": "AI", "addr": "127.0.0.1:0008", "proxy": "http://127.0.0.1:8081/8"},
-        {"id": "AJ", "addr": "127.0.0.1:0009", "proxy": "http://127.0.0.1:8081/9"},
-        {"id": "AK", "addr": "127.0.0.1:0010", "proxy": "http://127.0.0.1:8081/10"},
-        {"id": "AL", "addr": "127.0.0.1:0011", "proxy": "http://127.0.0.1:8081/11"},
-        {"id": "AM", "addr": "127.0.0.1:0012", "proxy": "http://127.0.0.1:8081/12"},
-        {"id": "AN", "addr": "127.0.0.1:0013", "proxy": "http://127.0.0.1:8081/13"},
-        {"id": "AO", "addr": "127.0.0.1:0014", "proxy": "http://127.0.0.1:8081/14"},
-        {"id": "AP", "addr": "127.0.0.1:0015", "proxy": "http://127.0.0.1:8081/15"},
-        {"id": "AQ", "addr": "127.0.0.1:0016", "proxy": "http://127.0.0.1:8081/16"},
-        {"id": "AR", "addr": "127.0.0.1:0017", "proxy": "http://127.0.0.1:8081/17"},
-        {"id": "AS", "addr": "127.0.0.1:0018", "proxy": "http://127.0.0.1:8081/18"},
-        {"id": "AT", "addr": "127.0.0.1:0019", "proxy": "http://127.0.0.1:8081/19"},
-        {"id": "AU", "addr": "127.0.0.1:0020", "proxy": "http://127.0.0.1:8081/20"}
-]}
+        {"id": "AA", "addr": "127.0.0.1:49832", "proxy": "http://127.0.0.1:4000"},
+        {"id": "AB", "addr": "127.0.0.1:49833", "proxy": "http://127.0.0.1:4001"},
+        {"id": "AC", "addr": "127.0.0.1:49838", "proxy": "http://127.0.0.1:4002"},
+        {"id": "AD", "addr": "127.0.0.1:49839", "proxy": "http://127.0.0.1:4003"},
+        {"id": "AE", "addr": "127.0.0.1:49860", "proxy": "http://127.0.0.1:4004"},
+        {"id": "AF", "addr": "127.0.0.1:49861", "proxy": "http://127.0.0.1:4005"},
+        {"id": "AG", "addr": "127.0.0.1:49862", "proxy": "http://127.0.0.1:4006"},
+        {"id": "AH", "addr": "127.0.0.1:49863", "proxy": "http://127.0.0.1:4007"},
+        {"id": "AI", "addr": "127.0.0.1:49864", "proxy": "http://127.0.0.1:4008"},
+        {"id": "AJ", "addr": "127.0.0.1:49869", "proxy": "http://127.0.0.1:4009"}
+]} 
           </textarea>
           <button type="button" id="submit-button">Load</button>
         </div>
-        <!-- <div class="parameters">
-          <div class="parameter">
-            <input type="number" value="-1000" id="charge-value">
-            <label for="charge-value">Charge value</label>
-            <button type="button" id="charge-update">Apply</button>
-          </div>
-          <div class="parameter">
-            <input type="number" value="100" id="link-value">
-            <label for="link-value">Link value</label>
-            <button type="button" id="link-update">Apply</button>
-          </div>
-          <div class="parameter">
-            <input type="number" value="20" id="node-radius">
-            <label for="node-radius">Node radius</label>
-            <button type="button" id="radius-update">Apply</button>
-          </div>
-        </div> -->
       </div>
       <button type="button" id="close-button" class="material-icons">close</button>
     </div>
@@ -74,59 +49,75 @@
   <div id="viz">
     <div class="flex-container-row">
       <div id="graph-container" class="svg-flex-container">
-        <div class="settings-container">
-          <div id="link-button" class="dropup" title="Link size">
-            <button class="viz-button material-icons" type="button">polyline</button>
-            <div class="dropup-content">
-              <div id="link-slider-value" class="slider-value">20</div>
-              <input type="range" min="0" max="100" value="10" class="slider" id="link-slider">
+        <div id="graph-settings" class="settings-container">
+          <div class="settings">
+            <button id="reset-button" title="Reset position" class="material-icons viz-button">gps_fixed</button>
+            <div id="link-button" class="dropup" title="Link size">
+              <button class="viz-button material-icons" type="button">polyline</button>
+              <div class="dropup-content">
+                <div id="link-slider-value" class="slider-value">20</div>
+                <input type="range" min="0" max="100" value="10" class="slider" id="link-slider">
+              </div>
+            </div>
+            <div id="radius-button" class="dropup" title="Node radius">
+              <button class="viz-button" type="button">
+                <span class="material-icons" style="font-size: 13px;">hdr_auto</span>
+                <span class="material-icons">hdr_auto</span>
+              </button>
+              <div class="dropup-content">
+                <div id="radius-slider-value" class="slider-value">20</div>
+                <input type="range" min="0" max="100" value="20" class="slider" id="radius-slider">
+              </div>
             </div>
           </div>
-          <div id="radius-button" class="dropup" title="Node radius">
-            <button class="viz-button" type="button">
-              <span class="material-icons" style="font-size: 13px;">hdr_auto</span>
-              <span class="material-icons">hdr_auto</span>
-            </button>
-            <div class="dropup-content">
-              <div id="radius-slider-value" class="slider-value">20</div>
-              <input type="range" min="0" max="100" value="20" class="slider" id="radius-slider">
-            </div>
+          <div class="node-settings">
+            <div id="settings-node-id" title="Node ID">Node ID</div>
+            <button id="stop-node-button" class="viz-button material-icons" title="Stop node">block</button>
           </div>
-          <button id="reset-button" title="Reset position" class="material-icons viz-button">gps_fixed</button>
         </div>
         <div id="svg-graph-container">
-          <div id="node-actions">
-            <div id="node-id">Node ID</div>
-            <button id="stop-node-button" class="viz-button action">STOP</button>
-            <button id="action2-node-button" class="viz-button action">ACTION2</button>
-            <button id="action3-node-button" class="viz-button action">ACTION3</button>
-          </div>
           <svg id="svg-graph"></svg>
         </div>
       </div>
 
-      <div id="resizer">||</div>
+      <div id="resizer-nodeId-container">
+        <div id="node-id"></div>
+        <div id="resizer">||</div>
+      </div>
+
 
       <div id="chart-container" class="svg-flex-container">
-        <div class="settings-container">
-          <div id="height-button" class="dropup" title="Vertical zoom">
-            <button type="button" class="material-icons viz-button">height</button>
-            <div class="dropup-content">
-              <div id="height-slider-value" class="slider-value">20</div>
-              <input type="range" min="1" max="100" value="20" class="slider" id="height-slider">
-            </div>
+        <div id="chart-settings" class="settings-container">
+          <div class="node-settings">
+            <button id="action2" class="viz-button action" type="button" title="Action 2">
+              <span class="material-icons icon">star</span>
+              <span class="index">2</span>
+            </button>
+            <button id="action3" class="viz-button action" type="button" title="Action 3">
+              <span class="material-icons icon">star</span>
+              <span class="index">3</span>
+            </button>
           </div>
-          <div id="width-button" class="dropup" title="Horizontal zoom">
-            <button type="button" class="material-icons viz-button">height</button>
-            <div class="dropup-content">
-              <div id="width-slider-value" class="slider-value">20</div>
-              <input type="range" min="1" max="100" value="20" class="slider" id="width-slider">
+          <div class="settings">
+            <div id="height-button" class="dropup" title="Vertical zoom">
+              <button type="button" class="material-icons viz-button">height</button>
+              <div class="dropup-content">
+                <div id="height-slider-value" class="slider-value">20</div>
+                <input type="range" min="1" max="100" value="20" class="slider" id="height-slider">
+              </div>
             </div>
+            <div id="width-button" class="dropup" title="Horizontal zoom">
+              <button type="button" class="material-icons viz-button">height</button>
+              <div class="dropup-content">
+                <div id="width-slider-value" class="slider-value">20</div>
+                <input type="range" min="1" max="100" value="20" class="slider" id="width-slider">
+              </div>
+            </div>
+            <button type="button" title="Scroll down" id="scroll-button"
+              class="material-icons viz-button">vertical_align_bottom</button>
+            <button type="button" title="Optimal performance" id="performance-button"
+              class="material-icons viz-button">flash_off</button>
           </div>
-          <button type="button" title="Scroll down" id="scroll-button"
-            class="material-icons viz-button">vertical_align_bottom</button>
-          <button type="button" title="Optimal performance" id="performance-button"
-            class="material-icons viz-button">flash_off</button>
         </div>
         <div id="svg-chart-container">
           <div id="labels-container">
@@ -153,7 +144,7 @@
       <div id="live-icon" class="material-icons">radio_button_checked</div>
       <button type="button" id="live-button" class="viz-button">LIVE</button>
 
-      <div id="speed-button" class="dropup" title="Vertical zoom">
+      <div id="speed-button" class="dropup" title="Playback speed">
         <button type="button" class="material-icons viz-button">schedule</button>
         <div class="dropup-content">
           <div id="speed-slider-value" class="slider-value">1x</div>
