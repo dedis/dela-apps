@@ -14,4 +14,5 @@ type dela interface {
 	GetOrdering() ordering.Service
 	GetTxManager() txn.Manager
 	GetAccessService() access.Service
+	Stop()
 }

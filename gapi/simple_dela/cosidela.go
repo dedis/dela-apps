@@ -72,6 +72,7 @@ type cosiDelaNode struct {
 	accessService access.Service
 	accessStore   accessstore
 	tree          hashtree.Tree
+	db            kv.DB
 }
 
 func newDelaNode(path string, port int) (dela, error) {
@@ -181,7 +182,7 @@ func newDelaNode(path string, port int) (dela, error) {
 		return nil, xerrors.Errorf("failed to load blocks: %v", err)
 	}
 
-	srvc, err := cosipbft.NewService(param)
+	srvc, err := cosipbft.NewService(param, cosipbft.WithBlockStore(blocks), cosipbft.WithGenesisStore(genstore))
 	if err != nil {
 		return nil, xerrors.Errorf("failed to create cosipbft service: %v", err)
 	}
@@ -206,6 +207,7 @@ func newDelaNode(path string, port int) (dela, error) {
 		accessService: accessService,
 		accessStore:   accessStore,
 		tree:          tree,
+		db:            db,
 	}, nil
 }
 
@@ -298,6 +300,25 @@ func (c cosiDelaNode) GetTxManager() txn.Manager {
 // GetAccessService implements dela
 func (c cosiDelaNode) GetAccessService() access.Service {
 	return c.accessService
+}
+
+// Stop implements dela
+func (c cosiDelaNode) Stop() {
+	c.ordering.Close()
+	c.pool.Close()
+
+	type StoppableMino interface {
+		mino.Mino
+
+		GracefulStop() error
+	}
+
+	closable, ok := c.onet.(StoppableMino)
+	if ok {
+		closable.GracefulStop()
+	}
+
+	c.db.Close()
 }
 
 // GetPublicKey  implements cosiDela
