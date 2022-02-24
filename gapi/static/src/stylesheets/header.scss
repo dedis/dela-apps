@@ -20,21 +20,67 @@ body .header {
     }
   }
 
-  button#settings-button {
-    border: none;
-    height: 100%;
-    width: 50px;
-    color: black;
-    padding: 0;
-    cursor: pointer;
-    background: transparent;
-    opacity: 0.8;
-    transition: 0.2s;
+  .header-settings-container {
+    display: flex;
+    align-items: center;
+    height: inherit;
 
-    &:hover {
-      opacity: 1;
+    input#search-bar {
+      border: 1px solid grey;
+      border-radius: 15px;
+      height: 20px;
+      margin: 2px 12px 0 0;
+      padding: 2px 5px 2px 5px;
+      // opacity: 0.8;
+      // transition: 0.2s;
+      // &:hover {
+      //   opacity: 1;
+      // }
+    }
+
+    button#settings-button {
+      border: none;
+      height: 100%;
+      width: 40px;
+      color: black;
+      padding: 0;
+      cursor: pointer;
+      background: transparent;
+      opacity: 0.8;
+      transition: 0.2s;
+  
+      &:hover {
+        opacity: 1;
+      }
+    }
+  
+    button#download-button {
+      border: none;
+      height: 100%;
+      width: 40px;
+      color: black;
+      padding: 3px 0 0 0;
+      cursor: pointer;
+      background: transparent;
+      opacity: 0.8;
+      transition: 0.2s;
+  
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    #error-icon {
+      color: red;
+      font-size: 18px;
+      margin: 16px 0 0 -19px;
+      z-index: 1;
+      pointer-events: none;
+      visibility: hidden;
     }
   }
+
+  
 
   .content-wrap {
     position: absolute;
@@ -84,24 +130,31 @@ body .header {
         }
       }
 
-      .parameters {
-        padding: 10px;
-
-        label {
-          padding: 0 10px;
-          font-size: 16px;
-        }
-
-        button {
-          cursor: pointer;
-        }
-
-        .parameter {
+      #error-container {
+        #error-container-header {
+          visibility: hidden;
           display: flex;
-          flex-direction: row;
-          justify-content: flex-start;
           align-items: center;
+          // background-color: #ececec;
+          padding: 5px;
+
+          #error-container-header-icon {
+            color: red;
+            font-size: 17px;
+            margin-right: 5px;
+          }
         }
+
+        #error-messages-container {
+          max-height: 150px;
+          overflow: scroll;
+
+          .error-message {
+            margin: 1px 0 1px 23px;
+            padding: 0 0 0 5px;
+            border-left: 2px solid red;
+          }
+        }  
       }
     }
 

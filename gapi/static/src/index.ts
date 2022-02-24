@@ -53,6 +53,7 @@ class Viz {
     // close previous connections if any
     Viz.sources.forEach((e) => { e.close() })
     Viz.sources = []
+    this.updateError()
   }
 
   start() {
@@ -80,7 +81,6 @@ class Viz {
     const self = this
 
     let liveOn: boolean = false
-    let nbMsg: number
 
     const add2Id = new Map<string, string>()
     self.nodes.nodes.forEach((node) => {
@@ -95,6 +95,7 @@ class Viz {
     liveListen()
     startLive(true)
     actionsListen()
+    downloadListen()
 
     function messageListen() {
 
@@ -106,7 +107,6 @@ class Viz {
       document.getElementById("stop-button").innerText = "cancel"
       document.getElementById("stop-button").title = "Stop receiving messages"
 
-      nbMsg = 0
       self.data = []
 
       self.nodes.nodes.forEach((node) => {
@@ -115,6 +115,8 @@ class Viz {
 
         const sendSrc = new EventSource(node.proxy + "/sent")
         Viz.sources.push(sendSrc)
+        sendSrc.onerror = () => self.printError(sendSrc)
+        sendSrc.onopen = () => self.updateError(sendSrc)
         sendSrc.onmessage = function (e) {
           const dSent: dataSent = JSON.parse(e.data)
 
@@ -137,14 +139,14 @@ class Viz {
 
             self.data.splice(insertIdx, 0, msg)
 
-            nbMsg++
-
             circleListen(circle, msg, SENT)
           }
         }
 
         const recvSrc = new EventSource(node.proxy + "/recv")
         Viz.sources.push(recvSrc)
+        recvSrc.onerror = () => self.printError(recvSrc)
+        recvSrc.onopen = () => self.updateError(recvSrc)
         recvSrc.onmessage = function (e) {
           const dRecv: dataRecv = JSON.parse(e.data)
           const fromNode = add2Id.get(dRecv.fromAddr)
@@ -348,6 +350,37 @@ class Viz {
         }
       }
     }
+
+    function downloadListen() {
+
+      document.getElementById("download-button").onclick = function () {
+        const data = self.data.map((d: datai) => {
+          let message = JSON.stringify(d.message, null, null).replace(/,/g, ';')//.replace(/,/g, '","').replace(/"/g, '"""').replace(/\n/g, '"\n"')
+          //message = '"' + message + '"'
+
+          return {
+            "Message": message,
+            "Source node": d.fromNode,
+            "Target node": d.toNode,
+            "Time sent": self.chart.parseTime(new Date(d.timeSent)),
+            "Time received": self.chart.parseTime(new Date(d.timeRecv)),
+            "ID": d.id,
+            "Color": d3.color(d.color).formatHex()
+          }
+        })
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += Object.keys(data[0]) + "\r\n"
+        data.forEach(d => {
+          let row = Object.values(d).join(",");
+          csvContent += row + "\r\n";
+        })
+        let encodedUri = encodeURI(csvContent)
+        let link = document.createElement("a");
+        link.setAttribute("href", encodedUri)
+        link.setAttribute("download", "my_data.csv")
+        link.click()
+      }
+    }
   }
 
   updateGraph(t: number) {
@@ -412,6 +445,68 @@ class Viz {
 
   stopReplay() {
     d3.select("#viz").interrupt("replay")
+  }
+
+  printError(ev: EventSource) {
+    if (!document.getElementById(ev.url)) {
+      const el = document.createElement("div")
+      el.id = ev.url
+      el.classList.add("error-message")
+      el.innerText = ev.url
+      document.getElementById("error-messages-container").appendChild(el)
+    }
+
+    document.getElementById("error-icon").style.visibility = "visible"
+    document.getElementById("error-container-header").style.visibility = "visible"
+
+    // Error icon transition
+    lowOpacity()
+    function lowOpacity() {
+      d3.select("#error-icon")
+        .transition()
+        .delay(2000)
+        .duration(300)
+        .style('opacity', 0.7)
+        .on('end', highOpacity);
+    }
+    function highOpacity() {
+      d3.select("#error-icon")
+        .transition()
+        .duration(300)
+        .style('opacity', 1)
+        .on('end', lowOpacity);
+    }
+  }
+
+  updateError(ev: EventSource = null) {
+    const self = this
+
+    if (ev === null) {
+      document.querySelectorAll(".error-message").forEach(el => el.remove())
+      d3.select("#error-icon").interrupt()
+      document.getElementById("error-icon").style.visibility = "hidden"
+      document.getElementById("error-container-header").style.visibility = "hidden"
+
+    }
+    else {
+      // Update error URLs
+      document.querySelectorAll(".error-message").forEach(el => {
+        // Remove error URL if connection is now opened
+        if (el.id === ev.url)
+          el.remove()
+
+        // Remove error URL if not in list of node proxies anymore
+        if (!self.nodes.nodes.some(node => (el.id.slice(0, node.proxy.length) === node.proxy)))
+          el.remove()
+      })
+
+      // Update style if there are no more URL errors
+      if (document.querySelectorAll(".error-message").length === 0) {
+        d3.select("#error-icon").interrupt()
+        document.getElementById("error-icon").style.visibility = "hidden"
+        document.getElementById("error-container-header").style.visibility = "hidden"
+      }
+    }
   }
 }
 

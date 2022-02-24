@@ -120,7 +120,7 @@ class Chart {
     this.popupWidth = 210
     this.popupMaxHeight = 160
 
-    this.minSpaceX = 200
+    this.minSpaceX = 100
     this.maxSpaceY = 100
 
     this.setTransitionDuration()
@@ -501,8 +501,8 @@ class Chart {
           .transition().duration(this._transitionDuration)
           .call(d3
             .axisLeft(this.timeScale)
-            .ticks((this.pixelPos[this.pixelPos.length - 1] - this.pixelPos[0]) / this.tickSpace) as any
-            // .tickFormat(d3.timeFormat(this.timeFormat)) as any
+            .ticks((this.pixelPos[this.pixelPos.length - 1] - this.pixelPos[0]) / this.tickSpace)
+            .tickFormat(d3.timeFormat(this.timeFormat)) as any
           )
       }
       else if (status === "sliderMove") {
@@ -511,7 +511,7 @@ class Chart {
           .call(d3
             .axisLeft(this.timeScale)
             .tickValues([time])
-            // .tickFormat(d3.timeFormat(this.timeFormat))
+            .tickFormat(d3.timeFormat(this.timeFormat))
           )
 
         this.svgScale.select(".clone").remove()
@@ -524,7 +524,7 @@ class Chart {
           .select(".clone")
         text
           .attr("dy", parseFloat(text.attr("dy")) + 1 + "em")
-        // .text(d3.timeFormat(this.dateFormat)(time))
+          .text(d3.timeFormat(this.dateFormat)(new Date(time)))
       }
     }
   }

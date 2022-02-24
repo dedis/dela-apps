@@ -183,7 +183,7 @@ class Graph {
         .select(".node-settings")
         .node() as HTMLElement)
         .clientWidth
-      console.log(wChart)
+
       d3
         .select("#graph-settings")
         .transition().duration(transitionDuration)

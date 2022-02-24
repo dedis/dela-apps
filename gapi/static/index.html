@@ -18,32 +18,42 @@
   <div class="header">
     <a class="logo" href="https://github.com/dedis/dela-apps" target="_blank"><img src="assets/logo.png"
         alt="logo" /></a>
-    <input type="text" placeholder="Search">
-    <button type="button" id="settings-button" class="material-icons">settings</button>
 
+    <div class="header-settings-container">
+      <input id="search-bar" type="text" placeholder="Search">
+      <button type="button" id="download-button" class="material-icons" title="Download data">download</button>
+      <button type="button" id="settings-button" class="material-icons">settings</button>
+      <div id="error-icon" class="material-icons">error</div>
+
+    </div>
     <div id="settings-panel" class="content-wrap">
       <div class="content">
         <div class="json-config">
           <textarea id="nodesData" rows="10" cols="50">
-
             {"nodes": [
-        {"id": "AA", "addr": "127.0.0.1:49832", "proxy": "http://127.0.0.1:4000"},
-        {"id": "AB", "addr": "127.0.0.1:49833", "proxy": "http://127.0.0.1:4001"},
-        {"id": "AC", "addr": "127.0.0.1:49838", "proxy": "http://127.0.0.1:4002"},
-        {"id": "AD", "addr": "127.0.0.1:49839", "proxy": "http://127.0.0.1:4003"},
-        {"id": "AE", "addr": "127.0.0.1:49860", "proxy": "http://127.0.0.1:4004"},
-        {"id": "AF", "addr": "127.0.0.1:49861", "proxy": "http://127.0.0.1:4005"},
-        {"id": "AG", "addr": "127.0.0.1:49862", "proxy": "http://127.0.0.1:4006"},
-        {"id": "AH", "addr": "127.0.0.1:49863", "proxy": "http://127.0.0.1:4007"},
-        {"id": "AI", "addr": "127.0.0.1:49864", "proxy": "http://127.0.0.1:4008"},
-        {"id": "AJ", "addr": "127.0.0.1:49869", "proxy": "http://127.0.0.1:4009"}
-]} 
+            {"id": "AA", "addr": "127.0.0.1:61041", "proxy": "http://127.0.0.1:4000"},
+            {"id": "AB", "addr": "127.0.0.1:61042", "proxy": "http://127.0.0.1:4001"},
+            {"id": "AC", "addr": "127.0.0.1:61043", "proxy": "http://127.0.0.1:4002"},
+            {"id": "AD", "addr": "127.0.0.1:61044", "proxy": "http://127.0.0.1:4003"},
+            {"id": "AE", "addr": "127.0.0.1:61045", "proxy": "http://127.0.0.1:4004"}
+    ]} 
+    
+    
           </textarea>
           <button type="button" id="submit-button">Load</button>
+        </div>
+
+        <div id="error-container">
+          <div id="error-container-header">
+            <span id="error-container-header-icon" class="material-icons">error</span>
+            <span> Failed to load resource. Could not connect to:</span>
+          </div>
+          <div id="error-messages-container"></div>
         </div>
       </div>
       <button type="button" id="close-button" class="material-icons">close</button>
     </div>
+  </div>
   </div>
 
   <div id="viz">
