@@ -20,7 +20,12 @@
         alt="logo" /></a>
 
     <div class="header-settings-container">
-      <input id="search-bar" type="text" placeholder="Search">
+      <div id="search-container" class="empty">
+        <input id="search-bar" type="text" placeholder="Search">
+        <button id="search-delete" class="material-icons">close</button>
+        <span id="search-icon-separation">|</span>
+        <button id="search-icon" class="material-icons">search</button>
+      </div>
       <button type="button" id="download-button" class="material-icons" title="Download data">download</button>
       <button type="button" id="settings-button" class="material-icons">settings</button>
       <div id="error-icon" class="material-icons">error</div>
@@ -31,11 +36,11 @@
         <div class="json-config">
           <textarea id="nodesData" rows="10" cols="50">
             {"nodes": [
-            {"id": "AA", "addr": "127.0.0.1:61041", "proxy": "http://127.0.0.1:4000"},
-            {"id": "AB", "addr": "127.0.0.1:61042", "proxy": "http://127.0.0.1:4001"},
-            {"id": "AC", "addr": "127.0.0.1:61043", "proxy": "http://127.0.0.1:4002"},
-            {"id": "AD", "addr": "127.0.0.1:61044", "proxy": "http://127.0.0.1:4003"},
-            {"id": "AE", "addr": "127.0.0.1:61045", "proxy": "http://127.0.0.1:4004"}
+            {"id": "AA", "addr": "127.0.0.1:5000", "proxy": "http://127.0.0.1:4000"},
+            {"id": "AB", "addr": "127.0.0.1:5001", "proxy": "http://127.0.0.1:4001"},
+            {"id": "AC", "addr": "127.0.0.1:5002", "proxy": "http://127.0.0.1:4002"},
+            {"id": "AD", "addr": "127.0.0.1:5003", "proxy": "http://127.0.0.1:4003"},
+            {"id": "AE", "addr": "127.0.0.1:5004", "proxy": "http://127.0.0.1:4004"}
     ]} 
     
     
@@ -109,6 +114,8 @@
             </button>
           </div>
           <div class="settings">
+            <button id="clear-messages-button" class="material-icons viz-button"
+              title="Clear messages">speaker_notes_off</button>
             <div id="height-button" class="dropup" title="Vertical zoom">
               <button type="button" class="material-icons viz-button">height</button>
               <div class="dropup-content">

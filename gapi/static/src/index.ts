@@ -7,6 +7,7 @@ import { SENT, RECV, REPLAY } from './message'
 import { Chart } from './chart'
 import { Resizer } from './resizer'
 import { getSortedIdx, supportsPassive } from './utils'
+import { text } from 'd3'
 
 export function sayHi() {
   document.getElementById('settings-button').addEventListener('click', function () {
@@ -16,6 +17,8 @@ export function sayHi() {
   document.getElementById('close-button').addEventListener('click', function () {
     togglePanel()
   })
+
+  searchBarListen()
 
   document.getElementById('submit-button').addEventListener("click", function () {
     togglePanel()
@@ -96,6 +99,7 @@ class Viz {
     startLive(true)
     actionsListen()
     downloadListen()
+    self.searchListen()
 
     function messageListen() {
 
@@ -202,6 +206,7 @@ class Viz {
           self.replay()
         }
         else if (this.innerText === "replay") {
+          self.time = self.chart.times[0]
           self.slider.setWidth(0)
           this.innerText = "pause"
           self.replay()
@@ -508,6 +513,27 @@ class Viz {
       }
     }
   }
+
+  searchListen() {
+    const searchBar = document.getElementById("search-bar") as HTMLInputElement
+
+    searchBar.addEventListener("keydown", function (ev: KeyboardEvent) {
+      if (ev.key === "Enter")
+        search(this.value)
+    })
+
+    document.getElementById("search-icon").addEventListener("click", () => search(searchBar.value))
+
+    const self = this
+    function search(value: string) {
+      const regExp = new RegExp(value, "i")
+      self.chart.clearPopups()
+      self.data.forEach((d, idx) => {
+        if (regExp.test(JSON.stringify(d.message, null, null)))
+          self.chart.openPopup(idx)
+      })
+    }
+  }
 }
 
 /**
@@ -522,4 +548,22 @@ function togglePanel() {
   } else {
     content.style.maxHeight = content.scrollHeight + 'px'
   }
+}
+
+function searchBarListen() {
+  const searchBar = document.getElementById("search-bar") as HTMLInputElement
+
+  document.getElementById("search-delete").addEventListener("click", () => {
+    searchBar.value = ""
+    searchBar.parentElement.classList.add("empty")
+  })
+
+  searchBar.addEventListener("input", function () {
+    console.log(this.value)
+    if (this.value === "") {
+      this.parentElement.classList.add("empty")
+    }
+    else
+      this.parentElement.classList.remove("empty")
+  })
 }

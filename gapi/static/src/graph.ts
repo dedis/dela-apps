@@ -304,6 +304,8 @@ class Graph {
     const halfDistx = (nodeBx + nodeAx) / 2
     const halfDisty = (nodeBy + nodeAy) / 2
 
+    const duration = 400
+
     if (status === SENT) {
       this.svg
         .selectAll(".graph-message")
@@ -313,7 +315,7 @@ class Graph {
             this.id = "_" + (id + 1)
         })
 
-      this.svg
+      const circle = this.svg
         .select(".graph")
         .append('circle')
         .attr("class", "graph-message")
@@ -322,40 +324,78 @@ class Graph {
         .attr('cy', nodeAy)
         .style('fill', msg.color)
         .attr('r', this.node_rad / 2)
-        .transition()
-        .ease(d3.easeLinear)
-        .duration(400)
-        .attr('cx', halfDistx)
-        .attr('cy', halfDisty)
+
+      if (msg.fromNode === msg.toNode) {
+        circle
+          .transition()
+          .ease(d3.easeLinear)
+          .duration(duration)
+          .attrTween('cx', function () {
+            return function (t) {
+              return nodeAx + self.node_rad * Math.cos(Math.PI * t)
+            }
+          })
+          .attrTween('cy', function () {
+            return function (t) {
+              return nodeAy + self.node_rad * Math.sin(Math.PI * t)
+            }
+          })
+      }
+      else
+        circle
+          .transition()
+          .ease(d3.easeLinear)
+          .duration(duration)
+          .attr('cx', halfDistx)
+          .attr('cy', halfDisty)
     }
     else if (status === RECV) {
-      this.svg
-        .select('#_' + idx)
-        .transition()
-        .ease(d3.easeLinear)
-        .duration(400)
-        .attr('cx', nodeBx)
-        .attr('cy', nodeBy)
-        .remove()
+      if (msg.fromNode === msg.toNode) {
+        this.svg
+          .select('#_' + idx)
+          .transition()
+          .ease(d3.easeLinear)
+          .duration(duration)
+          .attrTween('cx', function () {
+            return function (t) {
+              return nodeAx + self.node_rad * Math.cos(Math.PI * t + Math.PI)
+            }
+          })
+          .attrTween('cy', function () {
+            return function (t) {
+              return nodeAy + self.node_rad * Math.sin(Math.PI * t + Math.PI)
+            }
+          })
+          .remove()
+      }
+      else
+        this.svg
+          .select('#_' + idx)
+          .transition()
+          .ease(d3.easeLinear)
+          .duration(duration)
+          .attr('cx', nodeBx)
+          .attr('cy', nodeBy)
+          .remove()
     }
-    else if (status === REPLAY) {
-      const time = msg.timeRecv - msg.timeSent
-      this.svg
-        .select(".graph")
-        .append('circle')
-        .attr("class", "graph-message")
-        .attr('id', '_' + idx)
-        .attr('cx', nodeAx)
-        .attr('cy', nodeAy)
-        .style('fill', msg.color)
-        .attr('r', this.node_rad / 2)
-        .transition()
-        .ease(d3.easeLinear)
-        .duration(time)
-        .attr('cx', nodeBx)
-        .attr('cy', nodeBy)
-        .remove()
-    }
+    // else if (status === REPLAY) {
+    //   const time = msg.timeRecv - msg.timeSent
+    //   this.svg
+    //     .select(".graph")
+    //     .append('circle')
+    //     .attr("class", "graph-message")
+    //     .attr('id', '_' + idx)
+    //     .attr('cx', nodeAx)
+    //     .attr('cy', nodeAy)
+    //     .style('fill', msg.color)
+    //     .attr('r', this.node_rad / 2)
+    //     .transition()
+    //     .ease(d3.easeLinear)
+    //     .duration(time)
+    //     .attr('cx', nodeBx)
+    //     .attr('cy', nodeBy)
+    //     .remove()
+    // }
 
     function isConnected(msg: datai): boolean {
       if (self.createdLinks.get(msg.fromNode) === undefined) {
@@ -392,8 +432,16 @@ class Graph {
     const nodeBx = nodeBMatrix.e
     const nodeBy = nodeBMatrix.f
 
-    const posx = nodeAx + per * (nodeBx - nodeAx)
-    const posy = nodeAy + per * (nodeBy - nodeAy)
+    let posx
+    let posy
+    if (msg.fromNode === msg.toNode) {
+      posx = nodeAx + this.node_rad * Math.cos(2 * Math.PI * per)
+      posy = nodeAy + this.node_rad * Math.sin(2 * Math.PI * per)
+    }
+    else {
+      posx = nodeAx + per * (nodeBx - nodeAx)
+      posy = nodeAy + per * (nodeBy - nodeAy)
+    }
 
     const msgNode = this.svg.select('#_' + idx)
     if (msgNode.empty()) {

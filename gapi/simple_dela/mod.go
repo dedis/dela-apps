@@ -46,7 +46,7 @@ func init() {
 // Use the value contract
 // Check the state
 func main() {
-	n := 20
+	n := 5
 
 	delapkg.Logger = delapkg.Logger.Level(zerolog.WarnLevel)
 

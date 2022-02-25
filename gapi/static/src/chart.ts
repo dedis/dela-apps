@@ -143,8 +143,8 @@ class Chart {
       this.minSpaceX * (this.nodes.length + 2 * this.padding),
       this.container.clientWidth - this.scaleWidth
     )
-    this.svg.style("width", width)
-    this.svgLabels.style("width", width)
+    this.svg.attr("width", width)
+    this.svgLabels.attr("width", width)
     this.svgScale.attr("width", this.scaleWidth)
     d3.select("#padding").style("width", this.scaleWidth + "px")
 
@@ -257,7 +257,7 @@ class Chart {
   public addMsg(msg: datai, idx: number, status: number): SVGElement {
     const time = status === SENT ? msg.timeSent : status === RECV ? msg.timeRecv : undefined
     const host = status === SENT ? msg.fromNode : status === RECV ? msg.toNode : undefined
-    const _class = status === SENT ? "sent" : status === RECV ? "recv" : "unknown"
+    const status_string = status === SENT ? "sent" : status === RECV ? "recv" : "unknown"
 
     if (status === SENT) {
       // Sort messages' HTML ids
@@ -274,7 +274,7 @@ class Chart {
         .each(function (this: HTMLDivElement) {
           const id = parseInt(this.id.slice("popup".length))
           if (id >= idx)
-            this.id = "popup" + (id + 1)
+            this.id = "popup" + (id + 1) + status_string
         })
       // Insert new message in correct position
       this.svg
@@ -288,7 +288,7 @@ class Chart {
       .select(".chart-messages")
       .select(`[id = "${idx}"]`)
       .append("circle")
-      .attr("class", host + " " + _class)
+      .attr("class", host + " " + status_string)
       .attr("cx", this.xScale(host))
       .attr("cy", this.svg.attr("height"))
       .attr('r', this.r)
@@ -313,6 +313,10 @@ class Chart {
 
   public listen() {
     const self = this
+
+    document.getElementById('clear-messages-button').onclick = function () {
+      self.clearPopups()
+    }
     document.getElementById('height-slider').oninput = function (this: HTMLInputElement) {
       document.getElementById("height-slider-value").innerText = this.value
       self.maxSpaceY = parseFloat(this.value) * 100
@@ -446,40 +450,83 @@ class Chart {
 
   private updateMsgPos() {
     const self = this
+
     this.svg
       .selectAll(".chart-message")
       .data(this.idxLut)
       .each(function (this: SVGElement, d): any {
         const msg = d3.select(this)
+        const idSent = getClassId(msg.select(".sent"))
 
         msg
           .select(".sent")
           .transition().duration(self._transitionDuration)
           .attr("cy", self.pixelPos[d[SENT]])
+          .attr("cx", self.xScale(idSent))
 
+        // Add link/path between sent and recv circles if recv exists
         if (!msg.select(".recv").empty()) {
+          const idRecv = getClassId(msg.select(".recv"))
           msg
             .select(".recv")
             .transition().duration(self._transitionDuration)
             .attr("cy", self.pixelPos[d[RECV]])
+            .attr("cx", self.xScale(idRecv))
 
-          if (msg.select("line").empty())
+          if (msg.select("line, path").empty()) {
+
+            // If message sent to itself, link the sent and recv events with an arc
+            if (idSent === idRecv) {
+              const x1 = msg.select(".sent").attr("cx")
+              const x2 = x1
+              const y1 = self.pixelPos[d[SENT]]
+              const y2 = self.pixelPos[d[RECV]]
+              const dxc = self.nodes[self.nodes.length - 1].id === idSent ? -0.2 * self.minSpaceX : 0.2 * self.minSpaceX
+              const xc = parseFloat(x1) + dxc
+              const yc = y1 + (y2 - y1) / 2
+              msg
+                .insert("path", "circle")
+                .attr("d", `M${x1},${y1} Q${xc},${yc} ${x2},${y2}`)
+              // .attr("class", "from" + idSent + " to" + idRecv)
+            }
+            // If hosts of sent and recv events are different, link both with a line
+            else {
+              msg
+                .insert("line", "circle")
+                .attr("x1", self.xScale(idSent))
+                .attr("x2", self.xScale(idRecv))
+                .attr("y1", self.svg.attr("height"))
+                .attr("y2", self.svg.attr("height"))
+              // .attr("class", "from" + idSent + " to" + idRecv)
+            }
+          }
+
+          // Updates line and path positions
+          if (!msg.select("line").empty())
             msg
-              .insert("line", "circle")
-              .attr("x1", msg.select(".sent").attr("cx"))
-              .attr("x2", msg.select(".recv").attr("cx"))
-              .attr("y1", self.svg.attr("height"))
-              .attr("y2", self.svg.attr("height"))
-              .attr("class", "from" + getClassId(msg.select(".sent"))
-                + " to" + getClassId(msg.select(".recv")))
+              .select("line")
+              .transition().duration(self._transitionDuration)
+              // DO NOT USE msg.select(".recv").attr("cy")
+              // -> Attribute cy is blocked by circle transition
+              .attr("x1", self.xScale(idSent))
+              .attr("x2", self.xScale(idRecv))
+              .attr("y1", self.pixelPos[d[SENT]])
+              .attr("y2", self.pixelPos[d[RECV]])
+          if (!msg.select("path").empty()) {
+            // const idSent = getClassId(msg.select(".sent"))
+            const x1 = self.xScale(idSent)
+            const x2 = x1
+            const y1 = self.pixelPos[d[SENT]]
+            const y2 = self.pixelPos[d[RECV]]
+            const dxc = self.nodes[self.nodes.length - 1].id === idSent ? -0.2 * self.minSpaceX : 0.2 * self.minSpaceX
+            const xc = x1 + dxc
+            const yc = y1 + (y2 - y1) / 2
+            msg
+              .select("path")
+              .transition().duration(self._transitionDuration)
+              .attr("d", `M${x1},${y1} Q${xc},${yc} ${x2},${y2}`)
+          }
 
-          msg
-            .select("line")
-            .transition().duration(self._transitionDuration)
-            // DO NOT USE msg.select(".recv").attr("cy")
-            // -> Attribute cy is blocked by circle transition
-            .attr("y1", self.pixelPos[d[SENT]])
-            .attr("y2", self.pixelPos[d[RECV]])
         }
       })
 
@@ -545,19 +592,20 @@ class Chart {
           .transition()
           .duration(self._transitionDuration)
           .style("top", top + "px")
+          .style("left", self.xScale(getClassId(popup)) + "px")
       })
+
+    function getClassId(popup: d3.Selection<HTMLDivElement, {}, HTMLElement, any>) {
+      return self.nodes.find(d => popup.classed(d.id)).id
+    }
   }
 
   private updateXPos() {
     const self = this
-    // const parent = d3.select("#svg-chart-container").node() as HTMLElement
-    // const width = Math.max(
-    //   this.minSpaceX * (this.nodes.length + 2 * this.padding),
-    //   parent.clientWidth - this.scaleWidth
-    // )
+
     const width = this.minSpaceX * (this.nodes.length + 2 * this.padding)
-    this.svg.style("width", width)
-    this.svgLabels.style("width", width)
+    this.svg.attr("width", width)
+    this.svgLabels.attr("width", width)
 
     this.xScale
       .domain(this.nodes.map(d => d.id))
@@ -572,23 +620,11 @@ class Chart {
       idElements.filter(".pin").attr("x", x)
       idElements.filter(".vline").attr("x1", x).attr("x2", x)
       idElements.filter(".popup-label").style("left", x + "px")
-      idElements.filter("circle").attr("cx", x)
-
-      d3.select(this.container)
-        .selectAll(".popup")
-        .filter(`.to${d.id}`)
-        .filter("." + "recv")
-        .style("left", x + "px")
-      d3.select(this.container)
-        .selectAll(".popup")
-        .filter("." + d.id).filter("." + "sent")
-        .style("left", x + "px")
-
-      this.svg.selectAll(".from" + d.id).attr("x1", x)
-      this.svg.selectAll(".to" + d.id).attr("x2", x)
     })
 
     this.lineCursor("updateX")
+    this.updateMsgPos()
+    this.updatePopupPos()
   }
 
   private toggleHide(button: HTMLElement, id: string) {
@@ -603,7 +639,7 @@ class Chart {
       .selectAll(".pin")
       .filter("." + node.id)
       .transition().duration(200)
-      .style("fill-opacity", node.display === "block" ? 1 : 0.5)
+      .style("fill-opacity", node.display === "block" ? 1 : 0.3)
     d3
       .selectAll(".popup")
       .filter("." + node.id)
@@ -625,7 +661,7 @@ class Chart {
         this.svg.selectAll(".chart-message").filter("." + node.id).style("display", "block")
         d3.selectAll(".popup").style("display", "none")
         d3.selectAll(".popup").filter("." + node.id).style("display", "block")
-        this.svgLabels.selectAll(".pin").transition().duration(200).style("fill-opacity", 0.5)
+        this.svgLabels.selectAll(".pin").transition().duration(200).style("fill-opacity", 0.3)
         this.svgLabels.selectAll(".pin").filter("." + node.id).transition().duration(200).style("fill-opacity", 1)
         break
 
@@ -686,8 +722,9 @@ class Chart {
           return `translate(calc(${this.scaleWidth - 2 * this.r}px - 100%), ${this.offset}px)`
         return `translate(${this.scaleWidth + 2 * this.r}px, ${this.offset}px)`
       })
-      .attr("class", `popup ${msg.fromNode} to${msg.toNode} ${status_string}`)
+      .attr("class", `popup ${host} ${status_string}`)
       .attr("id", "popup" + circle.parentElement.id + status_string)
+      .style("display", this.nodes.find(d => host === d.id).display)
       .style("width", this.popupWidth + "px")
       .style("max-height", this.popupMaxHeight + "px")
       .style("left", this.xScale(host) + "px")
@@ -763,6 +800,14 @@ class Chart {
     const svgHeight = parseFloat(this.svg.attr("height"))
     const popupHeight = (popup.node() as HTMLElement).clientHeight
     return svgHeight - (cy + this.offset) > popupHeight ? cy : cy - popupHeight
+  }
+
+  public openPopup(idx: number) {
+    d3.select(`[id = "${idx}"]`).select(".sent").dispatch("click")
+  }
+
+  public clearPopups() {
+    d3.selectAll(".selected").dispatch("click")
   }
 
   public outlineMsg(outlined: boolean, idx: number = undefined) {
@@ -882,42 +927,6 @@ class Chart {
   public stop(node: NodesEntity) {
 
   }
-
-  // public cursorTransition(time:Date) {
-  //   const self = this
-  //   d3.select("#line-cursor")
-  //     .transition("replay")
-  //     // .duration(this.times[this.times.length - 1] - this.times[0])
-  //     .duration(50000)
-  //     .ease(d3.easeLinear)
-  //     .tween("cursorTween", cursorTween(this.timeScale(new Date(this.times[this.times.length - 1]))))
-  //   // .attr("transform", `translate(0, ${})`)
-
-  //   // this.times[this.times.length - 1] - this.times[0]
-
-  //   function cursorTween(lastPos: number) {
-  //     return function () {
-  //       const bar = d3.select('.progress-bar')
-  //       let i = d3.interpolateDate(time, new Date(self.times[self.times.length - 1]))
-  //       let k = d3.interpolateNumber(parseFloat(bar.style("width")), 100)
-  //       return function (t: number) {
-  //         self.tickValue = i(t)
-  //         self.updateTimeScale("replay")
-  //         self.lineCursor("updateY")
-  //         bar.style("width", k(t) + "%")
-  //       }
-  //     };
-  //   }
-  // }
-
-  // public cursorTransition2() {
-  //   d3.select("#line-cursor")
-  //     .attr("transform", `translate(0, ${this.timeScale(new Date(this.times[0]))})`)
-  //     .transition()
-  //     .ease(d3.easeLinear)
-  //     .tween("CursorTween", this.times[this.times.length - 1] - this.times[0])
-  //     .attr("transform", `translate(0, ${this.timeScale(new Date(this.times[this.times.length - 1]))})`)
-  // }
 }
 
 
