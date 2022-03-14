@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { NodesEntity } from "./nodes"
 import { datai, SENT, RECV } from './message'
-import { getSortedIdx, supportsPassive } from './utils'
+import { getSortedIdx, supportsPassive, cssTransformParsing } from './utils'
 import { timeDays, transition } from 'd3'
 
 export { Chart }
@@ -36,7 +36,7 @@ export { Chart }
  * @param _transitionDuration TimeScale, circles, lines and popup transition duration
  * @param _autoScroll If true, chart automatically transitins to bottom
  * @param zoomShiftStart Memorizes the time value where shift zoom began
- * @param mousePosSvg tracks mouse position inside svg
+ * @param mouseTime tracks mouse position inside svg
  * @param mousePosContainer tracks mouse position inside svg container
  */
 class Chart {
@@ -87,8 +87,9 @@ class Chart {
 
   _autoScroll: boolean
   _transitionDuration: number
+
   zoomShiftStart: number
-  mousePosSvg: number
+  mouseTime: number
   mousePosContainer: number
 
   constructor(nodes: NodesEntity[] | null) {
@@ -109,7 +110,7 @@ class Chart {
     this.r = 5
     this.marginBottom = 50
     this.offset = 2 * this.r
-    this.padding = 0.1
+    this.padding = 0.2
 
     this.scaleWidth = 80
     this.scaleAxisWidth = 1
@@ -121,7 +122,7 @@ class Chart {
     this.popupMaxHeight = 160
 
     this.minSpaceX = 100
-    this.maxSpaceY = 100
+    this.maxSpaceY = 200
 
     this.setTransitionDuration()
 
@@ -130,15 +131,18 @@ class Chart {
 
   public display() {
     const self: Chart = this
+    // Remove all previous chart element since last Load
     this.svg.selectAll('*').remove()
     this.svgLabels.selectAll('*').remove()
     this.svgScale.selectAll('*').remove()
     d3.selectAll(".popup").remove()
+    d3.selectAll(".popup-label").remove()
 
     this.times = []
     this.pixelPos = []
     this.idxLut = []
 
+    // Resize main elements to fit in window
     const width = Math.max(
       this.minSpaceX * (this.nodes.length + 2 * this.padding),
       this.container.clientWidth - this.scaleWidth
@@ -154,6 +158,7 @@ class Chart {
       .padding(this.padding)
       .round(true)
 
+    // Adds text labels (IDs AA, AB, AC,...)
     this.svgLabels
       .append("g")
       .attr("class", "labels")
@@ -165,10 +170,12 @@ class Chart {
       .text((d: NodesEntity) => d.id)
       .attr("x", (d: NodesEntity) => this.xScale(d.id))
 
+    // Get text size of label to place colored pin correctly
     const textHeight = (this.svgLabels.select("text").node() as SVGTextElement).getBBox().height
     this.svgLabels.attr("height", textHeight + this.pinWidth + this.gapLabelPin)
     d3.select("#padding").style("height", textHeight + this.pinWidth + this.gapLabelPin + "px")
 
+    // Adds colored square pins underneath text labels
     this.svgLabels
       .append("g")
       .attr("class", "color-pin")
@@ -184,13 +191,13 @@ class Chart {
       .attr("height", this.pinWidth)
       .on("click", (d: NodesEntity) => {
         d3
-          .selectAll(".popup-label")
-          .filter("." + d.id)
+          .select(".popup-label." + d.id)
           .style("display", "block")
       })
 
     addLabelPopup()
 
+    // Adds vertical lines to chart
     this.svg
       .attr("height", this.container.clientHeight - this.svgLabels.node().clientHeight)
       .append('g')
@@ -205,6 +212,7 @@ class Chart {
       .attr("y1", 0)
       .attr("y2", parseFloat(this.svg.attr("height")) - this.marginBottom)
 
+    // Adds messages group and tranlsate so that first message is not cut off
     this.svg
       .append("g")
       .attr("class", "chart-messages")
@@ -216,10 +224,15 @@ class Chart {
 
     this.lineCursor("add")
 
+    /**
+     * Show label popup with Hide and Focus buttons
+     */
     function addLabelPopup() {
+      // If user clicks anywhere else, remove all label popups
       d3.select("body").on("mouseup",
         () => d3.selectAll(".popup-label").style("display", "none"))
 
+      // Adds label popups. If last node: show popup on the left of square pin
       const popup = d3
         .select(self.svgLabels.node().parentElement)
         .selectAll(".popup-label")
@@ -235,6 +248,7 @@ class Chart {
         .style("left", (d: NodesEntity) => self.xScale(d.id) + "px")
         .style("top", textHeight + self.gapLabelPin + self.pinWidth / 2 + "px")
         .style("display", "none")
+      // Add Hide button
       popup
         .append("button")
         .attr("class", "viz-button hide-button")
@@ -243,6 +257,7 @@ class Chart {
         .on("click", function (this, d) {
           self.toggleHide(this, d.id)
         })
+      // Add focus button
       popup
         .append("button")
         .attr("class", "viz-button focus-button")
@@ -254,13 +269,21 @@ class Chart {
     }
   }
 
+  /**
+   * Function called by Viz to add chart messages (circles and lines SVG)
+   * @param msg message to add 
+   * @param idx idx (or visualization id) of message
+   * @param status if the message was sent or received
+   * @returns the circle that was added to the chart so that Viz can add listeners on it
+   */
   public addMsg(msg: datai, idx: number, status: number): SVGElement {
     const time = status === SENT ? msg.timeSent : status === RECV ? msg.timeRecv : undefined
     const host = status === SENT ? msg.fromNode : status === RECV ? msg.toNode : undefined
     const status_string = status === SENT ? "sent" : status === RECV ? "recv" : "unknown"
+    const self = this
 
     if (status === SENT) {
-      // Sort messages' HTML ids
+      // Sort messages IDs (visualization ID)
       this.svg
         .selectAll(".chart-message")
         .each(function (this: SVGElement): void {
@@ -268,22 +291,26 @@ class Chart {
           if (id >= idx)
             this.id = (id + 1).toString()
         })
-      // Reorder popup ids if necessary
+      // Reorder popup IDs if necessary
       d3
         .selectAll(".popup")
         .each(function (this: HTMLDivElement) {
-          const id = parseInt(this.id.slice("popup".length))
-          if (id >= idx)
+          const id = parseInt(this.id.slice("popup".length, -1 * "sent".length))
+          if (id >= idx) {
             this.id = "popup" + (id + 1) + status_string
+          }
         })
-      // Insert new message in correct position
+      // Insert new message group in correct position
+      // Message group contains send and receive circles and connecting line
       this.svg
         .select(".chart-messages")
         .insert("g", `[id = "${idx + 1}"]`)
-        .attr("class", "chart-message " + host)
+        .attr("class", "chart-message")
         .attr("id", idx)
-        .attr("display", this.nodes.find(d => host === d.id).display)
+        .attr("display", displayMsg)
     }
+
+    // Adds circle (sent or recv)
     const circle = this.svg
       .select(".chart-messages")
       .select(`[id = "${idx}"]`)
@@ -296,11 +323,11 @@ class Chart {
       .attr('stroke', "transparent")
       .attr("stroke-width", 10 + "px")
 
-
+    // Insert the new timestamp in the sorted time array {times}
     const sortedIdx = getSortedIdx(time, this.times)
     this.times.splice(sortedIdx, 0, time)
+    // Update the look up table that matches idx from {data} in Viz class, to idx from {times} in Chart class
     this.idxLut = this.idxLut.map(d => d.map(d => { if (d >= sortedIdx) return d + 1; else return d }))
-
     if (status === SENT)
       this.idxLut.splice(idx, 0, [sortedIdx, undefined])
     else if (status === RECV)
@@ -309,6 +336,20 @@ class Chart {
     this.updatePos()
 
     return circle.node() as SVGElement
+
+    function displayMsg() {
+      const fromNodeHidden = d3.select(".popup-label." + msg.fromNode).classed("hidden")
+      const toNodeHidden = d3.select(".popup-label." + msg.toNode).classed("hidden")
+      const focusedNode = self.nodes.find(node => d3.select(".popup-label." + node.id).classed("focused"))
+
+      if (focusedNode !== undefined)
+        return focusedNode.id === msg.fromNode || focusedNode.id === msg.toNode ? "block" : "none"
+
+      if (fromNodeHidden || toNodeHidden)
+        return "none"
+
+      return "block"
+    }
   }
 
   public listen() {
@@ -336,7 +377,7 @@ class Chart {
 
     this.svg.node().parentElement.onmousemove = function (this: HTMLElement, e) {
       if (!e.shiftKey) {
-        self.mousePosSvg = self.timeScale.invert(e.offsetY)
+        self.mouseTime = self.timeScale.invert(e.offsetY)
         self.mousePosContainer = e.clientY
       }
     }
@@ -361,7 +402,7 @@ class Chart {
 
     this.container.addEventListener("wheel", function (e) {
       if (e.shiftKey) {
-        this.scrollTop = self.timeScale(self.mousePosSvg)
+        this.scrollTop = self.timeScale(self.mouseTime)
           - self.mousePosContainer
           + this.getBoundingClientRect().top + parseFloat(self.svgLabels.attr("height"))
 
@@ -409,8 +450,17 @@ class Chart {
     }
   }
 
+  /**
+   * Updates the position of every chart element such as the svg size,
+   * the vertical lines size, the circles and lines positions, the popup positions,
+   * the timescale, the cursor.
+   */
   private updatePos() {
     const timeDiff = []
+    // Find the new circles position {PixelPos} on the chart
+    // First check if the maximum time between two messages has changed
+    // If so, rescale linearly so that the maximum space between two messages is respected
+    // TO DO: too computationaly expensive -> to be removed
     for (let i = 1; i < this.times.length; i++) {
       const diff = this.times[i] - this.times[i - 1]
       if (diff < 0)
@@ -432,22 +482,34 @@ class Chart {
 
     const vlineHeight = pixelDiff.reduce((d1, d2) => d1 + d2, 0) as number
 
+    // Updates chart SVG size
     this.svg
       .transition().duration(this._transitionDuration)
       .attr("height", vlineHeight + margin)
 
+    // Updates vertical lines size
     this.svg
       .select(".chart-vlines")
       .selectAll("line")
       .transition().duration(this._transitionDuration)
       .attr("y2", vlineHeight + this.offset)
 
+    // Save time corresponding to cursor position before we change timescale
+    // TO DO: this is not optimal, we should provide linecursor with time property from Viz class
+    const translateCoords = cssTransformParsing("translate", this.svg.select("#line-cursor").attr("transform"))
+    const cursorTime = this.timeScale.invert(translateCoords[1])
+
     this.updateTimeScale("idle")
     this.updateMsgPos()
     this.updatePopupPos()
     this.scrollDown()
+    // Update linecursor with its new position
+    this.lineCursor("updateY", cursorTime)
   }
 
+  /**
+   * Updates messages positions including circles and connecting lines
+   */
   private updateMsgPos() {
     const self = this
 
@@ -458,6 +520,7 @@ class Chart {
         const msg = d3.select(this)
         const idSent = getClassId(msg.select(".sent"))
 
+        // Updates X and Y positions of sent circles
         msg
           .select(".sent")
           .transition().duration(self._transitionDuration)
@@ -467,15 +530,17 @@ class Chart {
         // Add link/path between sent and recv circles if recv exists
         if (!msg.select(".recv").empty()) {
           const idRecv = getClassId(msg.select(".recv"))
+          // Updates X and Y positions of recv circles
           msg
             .select(".recv")
             .transition().duration(self._transitionDuration)
             .attr("cy", self.pixelPos[d[RECV]])
             .attr("cx", self.xScale(idRecv))
 
+          // If connecting line/path was not yet added: add it
           if (msg.select("line, path").empty()) {
 
-            // If message sent to itself, link the sent and recv events with an arc
+            // If message sent to itself, link the sent and recv events with an arc (path)
             if (idSent === idRecv) {
               const x1 = msg.select(".sent").attr("cx")
               const x2 = x1
@@ -530,37 +595,68 @@ class Chart {
         }
       })
 
+    /**
+     * Retrieves the node ID from SVG circle's class
+     * Each circle has the node ID as class (the node ID corresponding to the node processing the event)
+     * @param circle SVG circle
+     * @returns the node ID
+     */
     function getClassId(circle: d3.Selection<SVGElement, {}, HTMLElement, any>) {
       return self.nodes.find(d => circle.classed(d.id)).id
     }
   }
 
-  // Time scale update
+  /**
+   * Timescale update
+   * It has two states, one is "idle" that shows the entire timescale
+   * and the other is "sliderMove" which shows only the time indicated by {time}
+   * @param status different status when updating the timescale
+   * @param time provided when status is "sliderMove"
+   */
   public updateTimeScale(status: string, time: number = undefined) {
 
     if (this.times !== undefined && this.times.length !== 0) {
+      // Timescale is interpolate round because it is not possible to set scroll 
+      // with floating number. If not round, that implies that cursor is not well aligned with the scroll
+      // when there is automatic scrolling when replaying or dragging the progress-bar for example
+      // You can try to remove it and drag the progress bar, you will see the cursor shaking
       this.timeScale
         .domain([this.times[this.times.length - 1], this.times[0]])
         .range([this.pixelPos[this.pixelPos.length - 1] + this.offset, this.pixelPos[0] + this.offset])
         .interpolate(d3.interpolateRound)
+      // When showing idle timescale, convert scale into milli-seconds because 
+      // more precision is not supported when using Date libraries by d3/javascript
       if (status === "idle") {
+        // Convert timestamps in milliseconds if micro or nano-seconds 
+        // (13 is the number of digits in a millisecond unix timeStamp)
+        const t0 = parseInt(this.times[0].toString().slice(0, 13))
+        const tf = parseInt(this.times[this.times.length - 1].toString().slice(0, 13))
         this.axis
-          .transition().duration(this._transitionDuration)
+          // .transition().duration(this._transitionDuration)
           .call(d3
-            .axisLeft(this.timeScale)
+            .axisLeft(this.timeScale.domain([tf, t0]))
             .ticks((this.pixelPos[this.pixelPos.length - 1] - this.pixelPos[0]) / this.tickSpace)
             .tickFormat(d3.timeFormat(this.timeFormat)) as any
           )
       }
+      // When showing one time only timescale, use full precision time scale and treat manually
       else if (status === "sliderMove") {
+        // Retrieve remainder under millisecond precision
+        const t = parseInt(time.toString().slice(0, 13))
+        const remainder = time.toString().slice(13)
+        // Add the one tick using d3 axis
         this.svgScale
           .select('g')
           .call(d3
             .axisLeft(this.timeScale)
             .tickValues([time])
-            .tickFormat(d3.timeFormat(this.timeFormat))
           )
+        // Replace the unique tick with correct date format (until millisecond)
+        this.svgScale
+          .select("text")
+          .text(d3.timeFormat(this.timeFormat)(new Date(t)))
 
+        // Adds remaining precision underneath (micro/nano-second)
         this.svgScale.select(".clone").remove()
         this.svgScale
           .select("text")
@@ -571,22 +667,28 @@ class Chart {
           .select(".clone")
         text
           .attr("dy", parseFloat(text.attr("dy")) + 1 + "em")
-          .text(d3.timeFormat(this.dateFormat)(new Date(time)))
+          .text(remainder)
       }
     }
   }
 
+  /** 
+   * Updates the position of popups if they are opened
+   */
   private updatePopupPos() {
-    // Update popup cy position if corresponding message node has moved
+    // Update popup Y position if corresponding message node has moved
     const self = this
     d3
       .selectAll(".popup")
       .each(function (this: HTMLDivElement) {
         const popup = d3.select(this)
-        const id = parseInt(this.id.slice("popup".length))
+        // Retrieve the visualization ID from the popup HTML id
+        const id = parseInt(this.id.slice("popup".length, -1 * "sent".length))
         const status = popup.classed("sent") ?
           SENT : popup.classed("recv") ? RECV : undefined
         const cy = self.pixelPos[self.idxLut[id][status]]
+        // Update X position 
+        // If popup is too low in the chart, show it above its corresponding circle
         const top = self.getPopupTop(popup, cy)
         popup
           .transition()
@@ -595,14 +697,24 @@ class Chart {
           .style("left", self.xScale(getClassId(popup)) + "px")
       })
 
+    /**
+     * Retrieves the node ID from popup's class
+     * @param popup corresponding popup
+     * @returns the node ID
+     */
     function getClassId(popup: d3.Selection<HTMLDivElement, {}, HTMLElement, any>) {
-      return self.nodes.find(d => popup.classed(d.id)).id
+      const host = popup.classed("sent") ? "from" : popup.classed("recv") ? "to" : undefined
+      return self.nodes.find(d => popup.classed(host + d.id)).id
     }
   }
 
+  /**
+   * Updates X position of all elements except circles and lines (messages)
+   * used when there is a horizontal zoom
+   */
   private updateXPos() {
     const self = this
-
+    // Updates zoom based on the new value of {minSpaceX}
     const width = this.minSpaceX * (this.nodes.length + 2 * this.padding)
     this.svg.attr("width", width)
     this.svgLabels.attr("width", width)
@@ -613,6 +725,7 @@ class Chart {
       .padding(this.padding)
       .round(true)
 
+    // Updates positions of labels, pins, vertical lines and label popups
     this.nodes.forEach((d: NodesEntity) => {
       const idElements = d3.select(this.container).selectAll(`.${d.id} `)
       const x = self.xScale(d.id)
@@ -627,29 +740,51 @@ class Chart {
     this.updatePopupPos()
   }
 
+  /**
+   * Toggles hide of nodes.
+   * Hide all messages and popups originating from the node (color segregation)
+   * @param button Hide button from corresponding label popup
+   * @param id node ID
+   */
   private toggleHide(button: HTMLElement, id: string) {
+    // TO DO: remove display property from nodes (unnecessary)
     const node = this.nodes.find(d => d.id === id)
     node.display = node.display === "block" ? "none" : "block"
     button.innerText = node.display === "block" ? "HIDE" : "SHOW"
+    d3.select(".popup-label." + id).classed("hidden", node.display === "block" ? false : true)
+    // Hide messages
     this.svg
-      .selectAll(".chart-message")
-      .filter("." + node.id)
-      .style("display", node.display)
+      .selectAll(`circle.${node.id}.sent`)
+      .each(function (this: SVGCircleElement) {
+        this.parentElement.setAttribute("display", node.display)
+      })
+
+    // Opacify corresponding colored pin
     this.svgLabels
       .selectAll(".pin")
       .filter("." + node.id)
       .transition().duration(200)
       .style("fill-opacity", node.display === "block" ? 1 : 0.3)
+    // Hide popups
     d3
       .selectAll(".popup")
-      .filter("." + node.id)
+      .filter(".from" + node.id)
       .style("display", node.display)
   }
 
+  /**
+   * Toggles focus of nodes.
+   * Keep all messages send or received by the node
+   * Not equivalent to hide all except this node
+   * Only one node can be focused at a time
+   * @param button Focus button from corresponding label popup
+   * @param id node ID
+   */
   private toggleFocus(button: HTMLElement, id: string) {
     const node = this.nodes.find(d => d.id === id)
     switch (button.innerText) {
       case "FOCUS":
+        // Updates all text value of buttons in label popups
         this.nodes.forEach(d => { d.display = d.id === node.id ? "block" : "none" })
         d3.selectAll(".hide-button")
           .data(this.nodes)
@@ -657,18 +792,30 @@ class Chart {
         d3.selectAll(".focus-button")
           .data(this.nodes)
           .text((d: NodesEntity) => d.id === id ? "UNFOCUS" : "FOCUS")
-        this.svg.selectAll(".chart-message").style("display", "none")
-        this.svg.selectAll(".chart-message").filter("." + node.id).style("display", "block")
+        d3.selectAll(".popup-label")
+          .data(this.nodes)
+          .classed("focused", (d: NodesEntity) => d.id === id ? true : false)
+          .classed("hidden", (d: NodesEntity) => d.id === id ? false : true)
+        // Show focused messages and popups
+        this.svg.selectAll(".chart-message").attr("display", "none")
+        this.svg
+          .selectAll(`circle.${node.id}`)
+          .each(function (this: SVGCircleElement) {
+            this.parentElement.setAttribute("display", node.display)
+          })
         d3.selectAll(".popup").style("display", "none")
-        d3.selectAll(".popup").filter("." + node.id).style("display", "block")
+        d3.selectAll(`.popup`).filter(`.to${node.id},.from${node.id}`).style("display", "block")
         this.svgLabels.selectAll(".pin").transition().duration(200).style("fill-opacity", 0.3)
         this.svgLabels.selectAll(".pin").filter("." + node.id).transition().duration(200).style("fill-opacity", 1)
         break
 
       case "UNFOCUS":
+        d3.selectAll(".popup-label")
+          .classed("focused", false)
+          .classed("hidden", false)
         this.nodes.forEach(d => d.display = "block")
         button.innerText = "FOCUS"
-        this.svg.selectAll(".chart-message").style("display", "block")
+        this.svg.selectAll(".chart-message").attr("display", "block")
         d3.selectAll(".popup").style("display", "block")
         d3.selectAll(".hide-button").text("HIDE")
         this.svgLabels.selectAll(".pin").transition().duration(200).style("fill-opacity", 1)
@@ -676,6 +823,13 @@ class Chart {
     }
   }
 
+  /**
+   * Toggles between selected and unselected circles
+   * @param circle SVG circle to toggle
+   * @param msg message corresponding to circle
+   * @param status if it was sent or recv
+   * @returns if the circle was selected or not
+   */
   public toggleState(circle: SVGElement, msg: datai, status: number): boolean {
     const status_string = status === SENT ?
       "sent" : status === RECV ? "recv" : undefined
@@ -700,6 +854,13 @@ class Chart {
     }
   }
 
+  /**
+   * Adds popup next to circle
+   * @param circle SVG circle to add popup next to
+   * @param msg message corresponding to circle
+   * @param status if it was sent or recv
+   * @returns the GoTo button handled by Viz
+   */
   public addPopup(circle: SVGElement, msg: datai, status: number): HTMLElement {
     const self = this
 
@@ -711,8 +872,12 @@ class Chart {
       msg.fromNode : status === RECV ? msg.toNode : undefined
     const info = status === SENT ?
       "Sent to " + msg.toNode : status === RECV ? "Received from " + msg.fromNode : "Unknown"
-    const t = d3.timeFormat(this.dateFormat + " " + this.timeFormat)(new Date(time))
+    const t = this.parseTime(time, false)
 
+    // Add and position popup. Show popup on left of message if on far right.
+    // Show popup on top of message if on bottom
+    // Give the same ID than corresponding circle ex: "popup4sent"
+    // ID needs to be unique so "popup4" not possible
     const popup = d3
       .select(this.svg.node().parentElement)
       .append("div")
@@ -722,9 +887,8 @@ class Chart {
           return `translate(calc(${this.scaleWidth - 2 * this.r}px - 100%), ${this.offset}px)`
         return `translate(${this.scaleWidth + 2 * this.r}px, ${this.offset}px)`
       })
-      .attr("class", `popup ${host} ${status_string}`)
+      .attr("class", `popup from${msg.fromNode} to${msg.toNode} ${status_string}`)
       .attr("id", "popup" + circle.parentElement.id + status_string)
-      .style("display", this.nodes.find(d => host === d.id).display)
       .style("width", this.popupWidth + "px")
       .style("max-height", this.popupMaxHeight + "px")
       .style("left", this.xScale(host) + "px")
@@ -733,12 +897,13 @@ class Chart {
         d3.select(this).raise()
       })
 
+    // Adds text to popup
     popup
       .append("div")
       .attr("class", "info")
       .style("background", msg.color)
       .selectAll("div")
-      .data([["info", info], ["access_time_filled", t], ["account_circle", host]])
+      .data([["info", info], ["access_time_filled", t], ["account_circle", msg.id]])
       .enter()
       .append("div")
       .attr("class", "icon-info")
@@ -758,6 +923,7 @@ class Chart {
       .attr("class", "popup-message")
       .text(str)
 
+    // Adds buttons to popup
     const popupButtons = popup
       .insert("div", "div")
       .attr("class", "popup-buttons")
@@ -794,9 +960,15 @@ class Chart {
     return goToBtn.node() as HTMLElement
   }
 
-  private getPopupTop(popup: any, cy: number) {
-    // If circle is on the last on y axis, show message above node (underneath otherwise)
-    // We get the popup height after it has automatically resized when text was added
+  /**
+   * Gets "top" CSS property of popup.
+   * If circle is on the last on y axis, show message above node (underneath otherwise)
+   * @param popup 
+   * @param cy cirlce y position
+   * @returns CSS "top" property 
+   */
+  private getPopupTop(popup: any, cy: number): number {
+    // We need to get the popup height after it has automatically resized when text was added
     const svgHeight = parseFloat(this.svg.attr("height"))
     const popupHeight = (popup.node() as HTMLElement).clientHeight
     return svgHeight - (cy + this.offset) > popupHeight ? cy : cy - popupHeight
@@ -810,7 +982,13 @@ class Chart {
     d3.selectAll(".selected").dispatch("click")
   }
 
+  /**
+   * Highlight chart message when replay or progress bar is dragged
+   * @param outlined if it should be outlined or not
+   * @param idx idx/visualization ID of message
+   */
   public outlineMsg(outlined: boolean, idx: number = undefined) {
+    // if no idx is provided change all messages outline
     if (idx === undefined)
       this.svg
         .selectAll(".chart-message")
@@ -821,15 +999,21 @@ class Chart {
         .classed("outlined", outlined)
   }
 
+  /**
+   * Handles the horizontal time indicator of the chart
+   * @param status adds, updates y position or updates size of cursor
+   * @param time time at which the cursor should indicate time (not provided when cursor is added)
+   */
   public lineCursor(status: string, time: number = undefined) {
     if (status === "add") {
-      const triStrokeWidth = 2
+      const triStrokeWidth = 2 // width of small triangles on the sides of cursor
       const x1 = this.xScale(this.nodes[0].id) - this.r - triStrokeWidth
       const x2 = this.xScale(this.nodes[this.nodes.length - 1].id) + this.r + triStrokeWidth
 
       const g = this.svg
         .append("g")
         .attr("id", "line-cursor")
+        .attr("transform", `translate(0, 3)`)
         .attr("visibility", "hidden")
       g
         .append("line")
@@ -870,14 +1054,20 @@ class Chart {
     }
   }
 
-
+  /**
+   * Set chart's scroll bar position
+   * @param time time at which to position scroll bar
+   */
   public setScroll(time: number) {
     const el = this.container
     el.scrollTop = this.timeScale(time) - (el.clientHeight - parseFloat(this.svgLabels.attr("height"))) / 2
   }
 
+  /**
+   * When {autoscroll} is on, automaticall scrolls to bottom
+   * Using transitions here decreases performance a lot
+   */
   public scrollDown() {
-
     if (this.autoScroll) {
       if (this.container.scrollHeight - this.container.scrollTop > 100 &&
         d3.active(this.container, "scroll") === null) {
@@ -895,16 +1085,11 @@ class Chart {
         return function (t: number) { this.scrollTop = i(t); };
       };
     }
-    // if (set) {
-    //   const container = this.svg.node().parentElement.parentElement
-    //   container.scrollTop = container.scrollHeight
-    //   d3.select("#scroll-button").classed("scroll-unset", false)
-    // }
-    // else {
-    //   d3.select("#scroll-button").classed("scroll-unset", true)
-    // }
   }
 
+  /**
+   * autoscroll setter
+   */
   public set autoScroll(val: boolean) {
     this._autoScroll = val
     if (!val)
@@ -912,19 +1097,51 @@ class Chart {
     d3.select("#scroll-button").style("height", val ? "100%" : "18px")
   }
 
+  /**
+   * autoscroll getter
+   */
   public get autoScroll() {
     return this._autoScroll
   }
 
+  /**
+   * Transition duration setter
+   */
   private setTransitionDuration() {
     this._transitionDuration = 200
   }
 
-  public parseTime(time: Date) {
-    return d3.timeFormat(this.dateFormat + " " + this.timeFormat)(time)
+  /**
+   * Converts Unix timestamp (milli, micro or nano) into readable date with {timeformat} and {dateformat}
+   * @param time 
+   * @param withDate if the date needs to be included or not
+   * @returns the converted time
+   */
+  public parseTime(time: number, withDate: boolean) {
+    if (time === undefined)
+      return "Unknown"
+
+    // 13 is the number of digits in UnixMilli timestamp
+    const t = parseInt(time.toString().slice(0, 13))
+    let remainder = time.toString().slice(13)
+    const l = remainder.length
+    if (l > 1) // if there is microsecond precision
+      remainder = "." + remainder
+    if (l > 3) // if there is nanosecond precision
+      remainder = remainder.slice(0, 4) + "." + remainder.slice(4)
+
+    if (withDate)
+      return d3.timeFormat(this.dateFormat + " - " + this.timeFormat)(new Date(t)) + remainder
+    else
+      return d3.timeFormat(this.timeFormat)(new Date(t)) + remainder
   }
 
-  public stop(node: NodesEntity) {
+  /**
+   * TO DO
+   * @param node 
+   * @param name 
+   */
+  public toggleAction(node: NodesEntity, name: string) {
 
   }
 }

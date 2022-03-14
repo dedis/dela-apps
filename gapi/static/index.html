@@ -36,12 +36,22 @@
         <div class="json-config">
           <textarea id="nodesData" rows="10" cols="50">
             {"nodes": [
-            {"id": "AA", "addr": "127.0.0.1:5000", "proxy": "http://127.0.0.1:4000"},
-            {"id": "AB", "addr": "127.0.0.1:5001", "proxy": "http://127.0.0.1:4001"},
-            {"id": "AC", "addr": "127.0.0.1:5002", "proxy": "http://127.0.0.1:4002"},
-            {"id": "AD", "addr": "127.0.0.1:5003", "proxy": "http://127.0.0.1:4003"},
-            {"id": "AE", "addr": "127.0.0.1:5004", "proxy": "http://127.0.0.1:4004"}
-    ]} 
+        {"id": "AA", "addr": "127.0.0.1:5000", "proxy": "http://127.0.0.1:4000"},
+        {"id": "AB", "addr": "127.0.0.1:5001", "proxy": "http://127.0.0.1:4001"},
+        {"id": "AC", "addr": "127.0.0.1:5002", "proxy": "http://127.0.0.1:4002"},
+        {"id": "AD", "addr": "127.0.0.1:5003", "proxy": "http://127.0.0.1:4003"},
+        {"id": "AE", "addr": "127.0.0.1:5004", "proxy": "http://127.0.0.1:4004"},
+        {"id": "AF", "addr": "127.0.0.1:5005", "proxy": "http://127.0.0.1:4005"},
+        {"id": "AG", "addr": "127.0.0.1:5006", "proxy": "http://127.0.0.1:4006"},
+        {"id": "AH", "addr": "127.0.0.1:5007", "proxy": "http://127.0.0.1:4007"},
+        {"id": "AI", "addr": "127.0.0.1:5008", "proxy": "http://127.0.0.1:4008"},
+        {"id": "AJ", "addr": "127.0.0.1:5009", "proxy": "http://127.0.0.1:4009"},
+        {"id": "AK", "addr": "127.0.0.1:5010", "proxy": "http://127.0.0.1:4010"},
+        {"id": "AL", "addr": "127.0.0.1:5011", "proxy": "http://127.0.0.1:4011"},
+        {"id": "AM", "addr": "127.0.0.1:5012", "proxy": "http://127.0.0.1:4012"},
+        {"id": "AN", "addr": "127.0.0.1:5013", "proxy": "http://127.0.0.1:4013"},
+        {"id": "AO", "addr": "127.0.0.1:5014", "proxy": "http://127.0.0.1:4014"}
+]} 
     
     
           </textarea>
@@ -70,8 +80,8 @@
             <div id="link-button" class="dropup" title="Link size">
               <button class="viz-button material-icons" type="button">polyline</button>
               <div class="dropup-content">
-                <div id="link-slider-value" class="slider-value">20</div>
-                <input type="range" min="0" max="100" value="10" class="slider" id="link-slider">
+                <div id="link-slider-value" class="slider-value">15</div>
+                <input type="range" min="0" max="100" value="15" class="slider" id="link-slider">
               </div>
             </div>
             <div id="radius-button" class="dropup" title="Node radius">
@@ -87,7 +97,7 @@
           </div>
           <div class="node-settings">
             <div id="settings-node-id" title="Node ID">Node ID</div>
-            <button id="stop-node-button" class="viz-button material-icons" title="Stop node">block</button>
+            <button id="stop-node-button" class="viz-button material-icons action" title="Stop node">block</button>
           </div>
         </div>
         <div id="svg-graph-container">
@@ -169,16 +179,20 @@
         </div>
       </div>
 
-      <div class="dropup">
+      <!-- <div class="dropup">
         <button type="button" id="replay-type-button" class="material-icons viz-button">video_settings</button>
         <div id="replay-type-dropup-content" class="dropup-content">
           <button class="dropup-button replay-type-dropup-button" href="#"
             style="font-weight: bold;">Sequential</button>
           <button class="dropup-button replay-type-dropup-button" href="#">Real time</button>
         </div>
-      </div>
+      </div> -->
     </div>
-    <div id="sliderTimer"></div>
+    <div id="slider-times">
+      <div id="current-time"></div>
+      <div id="last-time"></div>
+    </div>
+
   </div>
 
   <script>
