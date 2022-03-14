@@ -11,30 +11,30 @@ import { gray, select } from 'd3'
 
 /**
  * Graph implements the primitives to create and update the graph.
+ * @param svg Main SVG graph
+ * @param svgBounds Main SVG dimensions
+ * @param createdLinks We keep the created links to avoid duplicates. we use a map for efficiency.
+ * @param links Contains the same as createdLinks but in a suitable form for d3
+ * @param simulation The d3 simulation
+ * @param link The simulation's links
+ * @param alpha The alpha value for the simulation. Corresponds to the heat in common simulation system.
+ * @param node_rad Radius of the nodes
  */
 class Graph {
 
   nodes: NodesEntity[] | null
 
-  // the main svg element
   svg: d3.Selection<SVGElement, {}, HTMLElement, any>;
   svgBounds: DOMRect
 
-  // we keep the created links to avoid duplicates. we use a map for efficiency.
   createdLinks: Map<string, Map<string, boolean>>;
-  // contains the same as createdLinks but in a suitable form for d3
   links: Array<{ source: string; target: string }>;
 
-  // the d3 simulation
   simulation: d3.Simulation<d3.SimulationNodeDatum, undefined>
-  // the simulation's links
   link: d3.Selection<SVGElement, {}, SVGGElement, unknown>
 
-  // the alpha value for the simulation. Corresponds to the heat in common
-  // simulation system.
   alpha: number = 0.1
 
-  // radius of the nodes
   node_rad: number = 20
 
   constructor(nodes: NodesEntity[] | null) {
@@ -44,6 +44,8 @@ class Graph {
   }
 
   display() {
+    const self = this
+
     this.links = []
     this.createdLinks = new Map<string, Map<string, boolean>>()
 
@@ -52,8 +54,6 @@ class Graph {
     this.nodes.forEach((n, i) => {
       n.color = palette(i)
     })
-
-    const self = this
 
     // reinitialize previous svg zooms
     this.svg.call(d3.zoom().on("zoom", zoom).transform, d3.zoomIdentity)
@@ -115,6 +115,11 @@ class Graph {
 
     gNode.append('title')
       .text((d: NodesEntity) => d.id)
+
+    gNode.append("foreignObject")
+      .attr("class", "graph-action-list")
+      .attr("width", 200)
+      .attr("height", 100)
 
     this.simulation
       .nodes(this.nodes as undefined)
@@ -198,6 +203,9 @@ class Graph {
         .select("#node-id")
         .transition().duration(transitionDuration)
         .style("background", d.color)
+
+      d3.select("#stop-node-button")
+        .text(d.stop === true ? "play_circle" : "block")
     }
   }
 
@@ -257,6 +265,12 @@ class Graph {
       .attr("font-size", this.node_rad + "px")
 
     this.svg
+      .select(".nodes")
+      .selectAll(".graph-action-list")
+      .selectAll("div")
+      .style("font-size", this.node_rad + 5 + "px")
+
+    this.svg
       .selectAll(".graph-message")
       .attr("r", this.node_rad / 2)
   }
@@ -276,7 +290,7 @@ class Graph {
    * @param toNode id of the destination node
    * @param color color to use for the circle
    */
-  showMsgTransition(msg: datai, idx: number, status: number) {
+  showMsgTransition(msg: datai, idx: number, status: number): SVGElement {
     const self = this
     if (!isConnected(msg) && !isConnected(msg)) {
 
@@ -289,6 +303,8 @@ class Graph {
       this.link = this.link.data(this.links).join('line')
 
       this.simulation.alpha(this.alpha).restart()
+      // Update link size with initial input value of corresponding setting
+      document.getElementById('link-slider').dispatchEvent(new Event('input'))
     }
 
     const nodeA: any = d3.select(`#${msg.fromNode}`).node()
@@ -348,6 +364,7 @@ class Graph {
           .duration(duration)
           .attr('cx', halfDistx)
           .attr('cy', halfDisty)
+      return circle.node() as SVGElement
     }
     else if (status === RECV) {
       if (msg.fromNode === msg.toNode) {
@@ -421,7 +438,7 @@ class Graph {
     }
   }
 
-  showMsg(msg: datai, idx: number, per: number) {
+  showMsg(msg: datai, idx: number, per: number): SVGElement | undefined {
     const nodeA: any = d3.select(`#${msg.fromNode}`).node()
     const nodeAMatrix = nodeA.transform.baseVal[0].matrix
     const nodeAx = nodeAMatrix.e
@@ -445,7 +462,7 @@ class Graph {
 
     const msgNode = this.svg.select('#_' + idx)
     if (msgNode.empty()) {
-      this.svg
+      return this.svg
         .select(".graph")
         .append('circle')
         .attr("class", "graph-message")
@@ -454,11 +471,41 @@ class Graph {
         .attr('cy', posy)
         .style('fill', msg.color)
         .attr('r', this.node_rad / 2)
+        .node() as SVGElement
+
     }
     else {
       msgNode
         .attr('cx', posx)
         .attr('cy', posy)
+    }
+    return undefined
+  }
+
+  public toggleAction(node: NodesEntity, name: string) {
+    const actions = this.svg
+      .select("#" + node.id)
+      .select(".graph-action-list")
+
+    // if (gNode.select("." + name).empty())
+
+    //   console.log(gNode.select(".graph-action-list"))
+
+    // const actionOn = (gNode.select(".graph-action-list")
+    //   .select("." + name).node() as HTMLElement).classList.toggle("on")
+    // .classed("on", function () { return d3.select(this).classed("on") ? false : true })
+
+    if (actions.select("." + name).empty()) {
+      actions
+        .append('xhtml:div')
+        .attr('class', 'material-icons ' + name)
+        .style("font-size", this.node_rad + 5 + "px")
+        .text(name)
+    }
+    else {
+      actions
+        .select("." + name)
+        .remove()
     }
   }
 }

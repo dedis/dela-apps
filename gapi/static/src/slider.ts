@@ -10,12 +10,12 @@ class Slider {
   beginClientX: number
   sliderLong: number
   per: number
-  timer: HTMLElement
+  currentTime: HTMLElement
 
   constructor(id: string) {
     this.slider = document.getElementById(id)
     this.bar = this.slider.querySelector('.progress-bar')
-    this.timer = document.getElementById("sliderTimer")
+    this.currentTime = document.getElementById("current-time")
   }
 
   listen() {

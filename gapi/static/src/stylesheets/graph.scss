@@ -24,6 +24,8 @@
     display: flex;
     flex: 1;
     position: relative;
+    -webkit-user-select: none;
+    user-select: none;    
 
     #svg-graph {
       flex: 1;
@@ -40,10 +42,8 @@
           dominant-baseline: middle;
         }
     
-        .actions {
-          font-size: 20px;
-          text-align: center;
-          visibility: hidden;
+        .graph-action-list {
+          pointer-events: none;
         }
       }
 

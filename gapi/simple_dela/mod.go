@@ -36,7 +36,7 @@ import (
 const dataSent = "data:{\"message\":%s, \"toAddr\":\"%s\", \"timeSent\":\"%d\", \"id\":\"%s\"}\n\n"
 const dataRecv = "data:{\"message\":\"%s\", \"fromAddr\":\"%s\", \"timeRecv\":\"%d\", \"id\":\"%s\"}\n\n"
 
-const txWait = time.Second * 20
+const txWait = time.Second * 15
 
 func init() {
 	rand.Seed(0)
@@ -46,7 +46,7 @@ func init() {
 // Use the value contract
 // Check the state
 func main() {
-	n := 5
+	n := 15
 
 	delapkg.Logger = delapkg.Logger.Level(zerolog.WarnLevel)
 
@@ -211,7 +211,7 @@ func main() {
 
 			addAndWait(manager, nodes[0].(cosiDelaNode), args...)
 
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 15)
 		}
 	}()
 
@@ -425,11 +425,19 @@ func listen(dn dynamicNode) {
 	})
 
 	srv.RegisterHandler("/start", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "text/event-stream")
+		rw.Header().Set("Cache-Control", "no-cache")
+		rw.Header().Set("Connection", "keep-alive")
+		rw.Header().Set("Access-Control-Allow-Origin", "*")
 		dn.start()
 
 	})
 
 	srv.RegisterHandler("/stop", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "text/event-stream")
+		rw.Header().Set("Cache-Control", "no-cache")
+		rw.Header().Set("Connection", "keep-alive")
+		rw.Header().Set("Access-Control-Allow-Origin", "*")
 		dn.stop()
 	})
 

@@ -64,8 +64,7 @@ body {
         flex-direction: column;
         // border: 1px solid gainsboro;
         // border-radius: 7px;
-        -webkit-user-select: none;
-        user-select: none;    
+
         overflow: hidden;
         
         .settings-container {
@@ -153,9 +152,13 @@ body {
 
     }
 
-    #sliderTimer{
-      margin-left: 122px;
+    #slider-times {
+      margin: 0 122px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
     }
+    
   }
 
 

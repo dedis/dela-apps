@@ -87,7 +87,7 @@ body .header {
         padding: 1px 1px 1px 3px;
       }
 
-      &.empty #search-delete, #search-icon-separation{
+      &.empty #search-delete, &.empty #search-icon-separation{
         visibility: hidden;
       }
     }
