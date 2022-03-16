@@ -36,7 +36,7 @@ import (
 const dataSent = "data:{\"message\":%s, \"toAddr\":\"%s\", \"timeSent\":\"%d\", \"id\":\"%s\"}\n\n"
 const dataRecv = "data:{\"message\":\"%s\", \"fromAddr\":\"%s\", \"timeRecv\":\"%d\", \"id\":\"%s\"}\n\n"
 
-const txWait = time.Second * 15
+const txWait = time.Second * 20
 
 func init() {
 	rand.Seed(0)
@@ -211,7 +211,7 @@ func main() {
 
 			addAndWait(manager, nodes[0].(cosiDelaNode), args...)
 
-			time.Sleep(time.Second * 15)
+			time.Sleep(time.Second * 10)
 		}
 	}()
 

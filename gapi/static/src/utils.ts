@@ -50,7 +50,6 @@ function cssTransformParsing(name: string, transform: string): Array<number> {
       const x = parseFloat(transform.slice(10, commaIdx))
       const y = parseFloat(transform.slice(commaIdx + 1, -1))
       return [x, y]
-      break
     default:
       break
 

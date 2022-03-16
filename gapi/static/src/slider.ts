@@ -1,5 +1,10 @@
 export { Slider }
 
+/**
+ * Slider handles the progress bar listeners and its position
+ * @param per Percentage of filled progress bar
+ * @param currentTime Time indicator on bottom left of progress bar
+ */
 class Slider {
 
   slider: HTMLElement | null

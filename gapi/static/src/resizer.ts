@@ -1,6 +1,10 @@
 
 export { Resizer }
 
+/**
+ * Resizer handles the resizing of both the graph and the chart
+ * by modifying their flex values
+ */
 class Resizer {
 
   resizer: HTMLElement | null
@@ -10,9 +14,6 @@ class Resizer {
   mDown: boolean
   beginX: number
   width: number
-  // beginClientX: number
-  // sliderLong: number
-  // per: number
 
   constructor(id: string) {
     this.resizer = document.getElementById(id)
@@ -30,6 +31,7 @@ class Resizer {
     self.resizer.addEventListener('mousedown', function (e: MouseEvent) {
       if (e.button == 0) { // Judgment click the left button
         self.mDown = true
+        // Save values that will remain the same when mousemove
         self.parentWidth = this.parentElement.parentElement.clientWidth
         self.beginX = this.parentElement.parentElement.offsetLeft
       }

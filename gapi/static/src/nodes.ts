@@ -1,3 +1,4 @@
+// Main interface of the nodes
 export interface NodesEntity {
   id: string;
   color: string;

@@ -74,19 +74,21 @@ class Graph {
 
     this.svg.call(d3.zoom().on("zoom", zoom)).on("dblclick.zoom", null)
 
+    // Button used to re-center graph
     d3.select("#reset-button")
       .on("click", function () {
         self.svg.call(d3.zoom().on("zoom", zoom).transform, d3.zoomIdentity)
         d3.select("#reset-button").text("gps_fixed")
       })
 
-
+    // Adds group for links
     this.link = gGraph
       .append('g')
       .attr('class', 'links')
       .attr('stroke-width', 1.5)
       .selectAll('line')
 
+    // Add nodes
     const gNode = gGraph
       .append('g')
       .attr('class', 'nodes')
@@ -101,7 +103,7 @@ class Graph {
         .on("end", dragended))
       .on("click", updateNodeActions)
 
-
+    // Initialize actions with first node
     updateNodeActions(this.nodes[0])
 
     gNode.append('circle')
@@ -125,17 +127,7 @@ class Graph {
       .nodes(this.nodes as undefined)
       .on('tick', ticked)
 
-
-    // d3.select("#node-id").style("background", "grey")
-    // d3.selectAll(".settings-container").style("background", `linear-gradient(to right,grey, grey)`)
-    // d3.select("#graph-settings").style("background", `linear-gradient(to right,grey ${w}px, grey 50%, ${d.color} 70%)`)
-    // d3
-    // .select("#chart-settings")
-    // .transition().duration(transitionDuration)
-    // .style("background", `linear-gradient(to left,grey ${w}px, grey 50%, ${d.color} 70%)`)
-
     function ticked() {
-
       self.link
         .attr('x1', (d: any) => d.source.x)
         .attr('y1', (d: any) => d.source.y)
@@ -176,6 +168,7 @@ class Graph {
         .attr("stroke", "none")
     }
 
+    // Updates settings used for interaction in the middles of the sentings bar
     function updateNodeActions(d: NodesEntity) {
       const transitionDuration = 300
       const wGraph = (d3
@@ -189,6 +182,7 @@ class Graph {
         .node() as HTMLElement)
         .clientWidth
 
+      // Updates background color of settings
       d3
         .select("#graph-settings")
         .transition().duration(transitionDuration)
@@ -204,6 +198,7 @@ class Graph {
         .transition().duration(transitionDuration)
         .style("background", d.color)
 
+      // Updates text of stop button
       d3.select("#stop-node-button")
         .text(d.stop === true ? "play_circle" : "block")
     }
@@ -211,11 +206,12 @@ class Graph {
 
   listen() {
     const self = this
+    // Listener to change radius of nodes
     document.getElementById('radius-slider').oninput = function (this: HTMLInputElement) {
       document.getElementById("radius-slider-value").innerText = this.value
       self.updateNodeRadius(parseFloat(this.value))
     }
-
+    // Listener to change size of links
     document.getElementById('link-slider').oninput = function (this: HTMLInputElement) {
       const value = 1000 * parseFloat(this.value) / parseFloat(this.max)
       document.getElementById("link-slider-value").innerText = this.value
@@ -225,12 +221,13 @@ class Graph {
     window.addEventListener("resize", function () { self.reportWindowSize() })
   }
 
-  updateCharge(val: number) {
-    if (typeof this.simulation !== 'undefined') {
-      this.simulation.force('charge', d3.forceManyBody().strength(val))
-      this.simulation.alpha(this.alpha).restart()
-    }
-  }
+  // Not used
+  // updateCharge(val: number) {
+  //   if (typeof this.simulation !== 'undefined') {
+  //     this.simulation.force('charge', d3.forceManyBody().strength(val))
+  //     this.simulation.alpha(this.alpha).restart()
+  //   }
+  // }
 
   updateLinkVal(val: number) {
     if (typeof this.simulation !== 'undefined') {
@@ -285,7 +282,7 @@ class Graph {
 
   /**
    * showMsgTransition creates the link of not already present and displays a circle from
-   * the source to the destination to picture a data transfer.
+   * the source to the destination to picture a data transfer. Used in live mode.
    * @param fromNode id of the source node
    * @param toNode id of the destination node
    * @param color color to use for the circle
@@ -323,6 +320,7 @@ class Graph {
     const duration = 400
 
     if (status === SENT) {
+      // Sort index of circle if needed
       this.svg
         .selectAll(".graph-message")
         .each(function (this: SVGElement): void {
@@ -331,6 +329,7 @@ class Graph {
             this.id = "_" + (id + 1)
         })
 
+      // Adds circle on source node
       const circle = this.svg
         .select(".graph")
         .append('circle')
@@ -341,6 +340,8 @@ class Graph {
         .style('fill', msg.color)
         .attr('r', this.node_rad / 2)
 
+      // If node sends to itself (internal event) -> make first half transition
+      // of a circular message that orbits around the node
       if (msg.fromNode === msg.toNode) {
         circle
           .transition()
@@ -357,6 +358,7 @@ class Graph {
             }
           })
       }
+      // If node sends to other node -> firs half linear transition
       else
         circle
           .transition()
@@ -364,9 +366,11 @@ class Graph {
           .duration(duration)
           .attr('cx', halfDistx)
           .attr('cy', halfDisty)
+      // Return node so that Viz can add an event listener on it
       return circle.node() as SVGElement
     }
     else if (status === RECV) {
+      // If node sends to itself (internal event) -> complete remaining circular transition
       if (msg.fromNode === msg.toNode) {
         this.svg
           .select('#_' + idx)
@@ -385,6 +389,7 @@ class Graph {
           })
           .remove()
       }
+      // If node sends to other node -> complete remaining linear transition
       else
         this.svg
           .select('#_' + idx)
@@ -395,25 +400,7 @@ class Graph {
           .attr('cy', nodeBy)
           .remove()
     }
-    // else if (status === REPLAY) {
-    //   const time = msg.timeRecv - msg.timeSent
-    //   this.svg
-    //     .select(".graph")
-    //     .append('circle')
-    //     .attr("class", "graph-message")
-    //     .attr('id', '_' + idx)
-    //     .attr('cx', nodeAx)
-    //     .attr('cy', nodeAy)
-    //     .style('fill', msg.color)
-    //     .attr('r', this.node_rad / 2)
-    //     .transition()
-    //     .ease(d3.easeLinear)
-    //     .duration(time)
-    //     .attr('cx', nodeBx)
-    //     .attr('cy', nodeBy)
-    //     .remove()
-    // }
-
+    // Checks if 2 nodes have a link
     function isConnected(msg: datai): boolean {
       if (self.createdLinks.get(msg.fromNode) === undefined) {
         self.createdLinks.set(msg.fromNode, new Map<string, boolean>())
@@ -427,7 +414,7 @@ class Graph {
     }
   }
 
-
+  // Clear either a list or all circle messages of graph
   clearMsgNodes(list: Array<number> = undefined) {
     if (list === undefined)
       this.svg.selectAll(".graph-message").remove()
@@ -438,6 +425,14 @@ class Graph {
     }
   }
 
+  /**
+   * Shows a particular message at a certain percentage of its trajectory to the target node.
+   * Used in callback function when progress bar is dragged or for replay.
+   * @param msg message to show
+   * @param idx index of message
+   * @param per percentage of trajectory to show the message at
+   * @returns 
+   */
   showMsg(msg: datai, idx: number, per: number): SVGElement | undefined {
     const nodeA: any = d3.select(`#${msg.fromNode}`).node()
     const nodeAMatrix = nodeA.transform.baseVal[0].matrix
@@ -461,6 +456,8 @@ class Graph {
     }
 
     const msgNode = this.svg.select('#_' + idx)
+    // If message is not created yet: create it
+    // and resturn the node so that Viz can add an listener on it
     if (msgNode.empty()) {
       return this.svg
         .select(".graph")
@@ -474,6 +471,7 @@ class Graph {
         .node() as SVGElement
 
     }
+    // If message already exists: update its position
     else {
       msgNode
         .attr('cx', posx)
@@ -482,18 +480,15 @@ class Graph {
     return undefined
   }
 
+  /**
+   * Toggles display of action names/icon on nodes
+   * @param node corresponding node
+   * @param name name of the action ex: "block"
+   */
   public toggleAction(node: NodesEntity, name: string) {
     const actions = this.svg
       .select("#" + node.id)
       .select(".graph-action-list")
-
-    // if (gNode.select("." + name).empty())
-
-    //   console.log(gNode.select(".graph-action-list"))
-
-    // const actionOn = (gNode.select(".graph-action-list")
-    //   .select("." + name).node() as HTMLElement).classList.toggle("on")
-    // .classed("on", function () { return d3.select(this).classed("on") ? false : true })
 
     if (actions.select("." + name).empty()) {
       actions

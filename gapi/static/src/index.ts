@@ -7,7 +7,7 @@ import { SENT, RECV, REPLAY } from './message'
 import { Chart } from './chart'
 import { Resizer } from './resizer'
 import { getSortedIdx, supportsPassive } from './utils'
-import { text } from 'd3'
+import { drag, text } from 'd3'
 
 export function sayHi() {
   document.getElementById('settings-button').addEventListener('click', function () {
@@ -30,13 +30,14 @@ export function sayHi() {
 /** All different IDs 
  * node.id: ID that is entered in the settings of the visualization for each node (AA, AB, ...)
  * message.id: Message ID included in the data received by Polypus, used to match sending and receiving events
- * HTML id or idx or visualization ID: ID given by the visualization to identify messages 0,1,2,3,4,5,...
+ * HTML id or idx visualization ID: ID given by the visualization to identify messages 0,1,2,3,4,5,...
  */
 
 /**
  * Viz class manages the overall visualization and other sub-classes like Chart and Graph
  * @param nodes Array of nodes given by user with properties: id, proxy, addr, ... (see nodes.ts)
  * @param data Array of messages received by nodes with properties: message, fromNode, toNode, ... (see message.ts)
+ * @param recvBuffer Buffer of messages that were received and that have no corresponding sent event (so we save until we find one)
  * @param graph Main subclass for the graph
  * @param chart Main subclass for the chart
  * @param slider Main subclass for the progress bar in the playback controls
@@ -55,6 +56,8 @@ class Viz {
 
   data: Array<datai>
 
+  recvBuffer: Array<dataRecv>
+
   graph: Graph
 
   chart: Chart
@@ -71,6 +74,7 @@ class Viz {
     const inputData = document.getElementById('nodesData') as HTMLInputElement
     this.nodes = JSON.parse(inputData.value)
     this.data = []
+    this.recvBuffer = []
     // Close previous connections if any
     Viz.sources.forEach((e) => { e.close() })
     Viz.sources = []
@@ -163,6 +167,7 @@ class Viz {
               const graphCircle = self.graph.showMsgTransition(msg, insertIdx, SENT)
               self.graphCircleListen(graphCircle, msg.timeSent)
             }
+
             const chartCircle = self.chart.addMsg(msg, insertIdx, SENT)
 
             self.data.splice(insertIdx, 0, msg)
@@ -170,6 +175,23 @@ class Viz {
             chartCircleListen(chartCircle, msg, SENT)
 
             refreshTimer()
+
+            // Check if sent event already has a corresponding recv event
+            for (let i = 0; i < self.recvBuffer.length; i++) {
+              const recv = self.recvBuffer[i]
+              const fromNode = add2Id.get(recv.fromAddr)
+              // Corresponding receiving and sending events should have the same id, source node (and target node)
+              if (msg.id === recv.id && msg.fromNode === fromNode && msg.timeRecv === undefined) {
+                console.log("found received event before sent")
+                msg.timeRecv = parseInt(recv.timeRecv)
+                const chartCircle = self.chart.addMsg(msg, insertIdx, RECV)
+                chartCircleListen(chartCircle, msg, RECV)
+                if (liveOn === true)
+                  self.graph.showMsgTransition(msg, insertIdx, RECV)
+                refreshTimer()
+                break
+              }
+            }
           }
         }
 
@@ -181,7 +203,6 @@ class Viz {
         recvSrc.onmessage = function (e) {
           const dRecv: dataRecv = JSON.parse(e.data)
           console.log(dRecv)
-
           const fromNode = add2Id.get(dRecv.fromAddr)
           // Find the sending event corresponding to this receiving one
           if (fromNode !== undefined) {
@@ -195,9 +216,11 @@ class Viz {
                 if (liveOn === true)
                   self.graph.showMsgTransition(msg, i, RECV)
                 refreshTimer()
-                break
+                return
               }
             }
+            // If recv event doesnt have a corresponding sent event -> save into buffer
+            self.recvBuffer.push(dRecv)
           }
         }
       })
@@ -331,11 +354,11 @@ class Viz {
     // with discontinuous increments as follow:
     // 0.1,0.2,0.3,...,0.9,1,2,3,...,9,10,20,30,...,90,100,200,300,...
     function speedListen() {
+      const offset = 6
       document.getElementById('speed-slider').oninput = function (this: HTMLInputElement) {
         let value = parseFloat(this.value)
         const r = value % 10
         const tens = Math.floor(value / 10)
-        const offset = 6
         const decimals = Math.max(0, offset - tens)
         value = (r === 0 ? 1 : r) * Math.pow(10, tens - offset)
         document.getElementById("speed-slider-value").innerText = value.toFixed(decimals) + "x"

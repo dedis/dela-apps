@@ -121,7 +121,7 @@ class Chart {
     this.popupWidth = 210
     this.popupMaxHeight = 160
 
-    this.minSpaceX = 100
+    this.minSpaceX = 40
     this.maxSpaceY = 200
 
     this.setTransitionDuration()
@@ -406,7 +406,7 @@ class Chart {
           - self.mousePosContainer
           + this.getBoundingClientRect().top + parseFloat(self.svgLabels.attr("height"))
 
-        self.maxSpaceY = Math.max(0, self.maxSpaceY - Math.sign(e.deltaY))
+        self.maxSpaceY = Math.max(0, self.maxSpaceY - 10 * Math.sign(e.deltaY))
         self.updatePos()
       }
       else {
@@ -632,7 +632,7 @@ class Chart {
         const t0 = parseInt(this.times[0].toString().slice(0, 13))
         const tf = parseInt(this.times[this.times.length - 1].toString().slice(0, 13))
         this.axis
-          // .transition().duration(this._transitionDuration)
+          .transition().duration(this._transitionDuration)
           .call(d3
             .axisLeft(this.timeScale.domain([tf, t0]))
             .ticks((this.pixelPos[this.pixelPos.length - 1] - this.pixelPos[0]) / this.tickSpace)
@@ -691,8 +691,7 @@ class Chart {
         // If popup is too low in the chart, show it above its corresponding circle
         const top = self.getPopupTop(popup, cy)
         popup
-          .transition()
-          .duration(self._transitionDuration)
+          .transition().duration(self._transitionDuration)
           .style("top", top + "px")
           .style("left", self.xScale(getClassId(popup)) + "px")
       })
@@ -1068,6 +1067,10 @@ class Chart {
    * Using transitions here decreases performance a lot
    */
   public scrollDown() {
+
+    // if (this.autoScroll)
+    //   this.container.scrollTop = this.container.scrollHeight
+
     if (this.autoScroll) {
       if (this.container.scrollHeight - this.container.scrollTop > 100 &&
         d3.active(this.container, "scroll") === null) {
@@ -1081,9 +1084,9 @@ class Chart {
 
     function scrollTopTween(scrollTop: number) {
       return function () {
-        let i = d3.interpolateNumber(this.scrollTop, scrollTop);
-        return function (t: number) { this.scrollTop = i(t); };
-      };
+        let i = d3.interpolateNumber(this.scrollTop, scrollTop)
+        return function (t: number) { this.scrollTop = i(t) }
+      }
     }
   }
 
@@ -1108,7 +1111,7 @@ class Chart {
    * Transition duration setter
    */
   private setTransitionDuration() {
-    this._transitionDuration = 200
+    this._transitionDuration = 100
   }
 
   /**
